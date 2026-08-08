@@ -55,6 +55,8 @@ interface Element {
     let soundsMuted = false;
     let editingAttack = null;
     let editingAbility = null;
+    let authMode = 'login';
+    let authToken = localStorage.getItem('ficha-auth-token') || '';
 
     const classEvolutions = {
         Fortalecedor: ['Guerreiro', 'Assassino', 'Tank'],
@@ -659,6 +661,102 @@ interface Element {
         document.getElementById('settings-panel').classList.toggle('open');
     }
 
+    function openAuthModal() {
+        if (authToken) {
+            if (confirm('Você está conectado. Deseja sair da conta?')) logout();
+            return;
+        }
+        setAuthMode('login');
+        document.getElementById('auth-modal').style.display = 'flex';
+    }
+
+    function closeAuthModal() {
+        document.getElementById('auth-modal').style.display = 'none';
+        document.getElementById('auth-feedback').innerText = '';
+    }
+
+    function setAuthMode(mode) {
+        authMode = mode;
+        document.getElementById('auth-title').innerText = mode === 'login' ? 'Entrar na conta' : 'Criar conta';
+        document.getElementById('auth-submit-btn').innerText = mode === 'login' ? 'Entrar' : 'Registrar';
+        document.getElementById('login-tab').classList.toggle('active', mode === 'login');
+        document.getElementById('register-tab').classList.toggle('active', mode === 'register');
+        document.getElementById('auth-feedback').innerText = '';
+    }
+
+    async function submitAuth(event) {
+        event.preventDefault();
+        const feedback = document.getElementById('auth-feedback');
+        feedback.innerText = 'Aguarde...';
+        try {
+            const response = await fetch(`/api/${authMode}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: document.getElementById('auth-email').value, password: document.getElementById('auth-password').value })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Não foi possível autenticar.');
+            authToken = result.token;
+            localStorage.setItem('ficha-auth-token', authToken);
+            updateAuthButton(result.user);
+            closeAuthModal();
+            alert('Login realizado. Suas fichas agora podem ser salvas na conta.');
+        } catch (error) {
+            feedback.innerText = error.message || 'Não foi possível conectar ao servidor.';
+        }
+    }
+
+    async function logout() {
+        try { await fetch('/api/logout', { method: 'POST', headers: { Authorization: `Bearer ${authToken}` } }); } catch (error) { }
+        authToken = '';
+        localStorage.removeItem('ficha-auth-token');
+        updateAuthButton();
+    }
+
+    function updateAuthButton(user?: { email: string }) {
+        const button = document.getElementById('login-btn');
+        if (!button) return;
+        button.innerText = user?.email ? user.email.split('@')[0] : (authToken ? 'Conta' : 'Login');
+        button.title = authToken ? 'Sair da conta' : 'Entrar';
+    }
+
+    function openSaveOptions() {
+        document.getElementById('save-feedback').innerText = '';
+        document.getElementById('save-modal').style.display = 'flex';
+    }
+
+    async function saveSheetToAccount() {
+        const feedback = document.getElementById('save-feedback');
+        if (!authToken) { feedback.innerText = 'Faça login antes de salvar na conta.'; return; }
+        feedback.innerText = 'Salvando...';
+        const response = await fetch('/api/sheets/current', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+            body: JSON.stringify({ sheet: collectSheetData() })
+        });
+        const result = await response.json();
+        feedback.innerText = response.ok ? 'Ficha salva na conta.' : (result.error || 'Não foi possível salvar.');
+    }
+
+    async function loadSheetFromAccount() {
+        if (!authToken) return;
+        const response = await fetch('/api/sheets/current', { headers: { Authorization: `Bearer ${authToken}` } });
+        if (response.status === 401) return logout();
+        const result = await response.json();
+        if (result.sheet) restoreSheetData(result.sheet);
+    }
+
+    async function restoreAuthSession() {
+        if (!authToken) return updateAuthButton();
+        try {
+            const response = await fetch('/api/me', { headers: { Authorization: `Bearer ${authToken}` } });
+            if (!response.ok) return logout();
+            const result = await response.json();
+            updateAuthButton(result.user);
+            await loadSheetFromAccount();
+        } catch (error) { updateAuthButton(); }
+    }
+
     function toggleSoundMute(isMuted) {
         soundsMuted = isMuted;
     }
@@ -1255,4 +1353,5 @@ interface Element {
     renderSkills();
     renderAttackSelectors();
     calculateSheet();
+    restoreAuthSession();
     updateBars();
