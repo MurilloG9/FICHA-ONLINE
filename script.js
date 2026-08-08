@@ -36,6 +36,9 @@ let editingAttack = null;
 let editingAbility = null;
 let authMode = 'login';
 let authToken = localStorage.getItem('ficha-auth-token') || '';
+let currentUser = null;
+const apiOrigin = window.API_BASE_URL || (window.location.protocol === 'file:' || ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '3000') ? 'http://localhost:3000' : '');
+const apiUrl = path => `${apiOrigin}${path}`;
 const classEvolutions = {
     Fortalecedor: ['Guerreiro', 'Assassino', 'Tank'],
     Preciso: ['Atirador', 'Lançador', 'Caçador'],
@@ -568,9 +571,7 @@ function toggleSettings(event) {
 }
 function openAuthModal() {
     if (authToken) {
-        if (confirm('Você está conectado. Deseja sair da conta?'))
-            logout();
-        return;
+        return openAccountMenu();
     }
     setAuthMode('login');
     document.getElementById('auth-modal').style.display = 'flex';
@@ -592,11 +593,15 @@ async function submitAuth(event) {
     const feedback = document.getElementById('auth-feedback');
     feedback.innerText = 'Aguarde...';
     try {
-        const response = await fetch(`/api/${authMode}`, {
+        const response = await fetch(apiUrl(`/api/${authMode}`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: document.getElementById('auth-identifier').value, password: document.getElementById('auth-password').value })
         });
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            throw new Error('Abra a ficha pelo endereço http://localhost:3000 para usar o login.');
+        }
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Não foi possível autenticar.');
         authToken = result.token;
@@ -609,8 +614,9 @@ async function submitAuth(event) {
     }
 }
 async function logout() {
-    try { await fetch('/api/logout', { method: 'POST', headers: { Authorization: `Bearer ${authToken}` } }); } catch (error) { /* sessão local ainda pode ser encerrada */ }
+    try { await fetch(apiUrl('/api/logout'), { method: 'POST', headers: { Authorization: `Bearer ${authToken}` } }); } catch (error) { /* sessão local ainda pode ser encerrada */ }
     authToken = '';
+    currentUser = null;
     localStorage.removeItem('ficha-auth-token');
     updateAuthButton();
 }
@@ -619,8 +625,53 @@ function updateAuthButton(user) {
     const adminButton = document.getElementById('admin-users-btn');
     if (!button) return;
     button.innerText = user?.username || user?.email?.split('@')[0] || (authToken ? 'Conta' : 'Login');
+    if (user) currentUser = user;
     button.title = authToken ? 'Sair da conta' : 'Entrar';
     if (adminButton) adminButton.hidden = user?.role !== 'admin';
+}
+function openAccountMenu() {
+    if (!authToken) return openAuthModal();
+    const modal = document.getElementById('account-modal');
+    if (!modal) return;
+    document.getElementById('account-title').innerText = `Conta: ${currentUser?.username || currentUser?.email || 'usuário'}`;
+    document.getElementById('account-feedback').innerText = '';
+    modal.style.display = 'flex';
+    loadAccountSheets();
+}
+function closeAccountMenu() {
+    document.getElementById('account-modal').style.display = 'none';
+}
+async function loadAccountSheets() {
+    const list = document.getElementById('saved-sheet-list');
+    const feedback = document.getElementById('account-feedback');
+    if (!list) return;
+    list.innerHTML = '<p class="history-empty">Carregando fichas...</p>';
+    try {
+        const response = await fetch(apiUrl('/api/sheets'), { headers: { Authorization: `Bearer ${authToken}` } });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Não foi possível carregar as fichas.');
+        list.innerHTML = result.sheets.map(sheet => `
+            <div class="saved-sheet-row">
+                <div><strong>${escapeAdminText(sheet.name)}</strong><small>Atualizada em ${escapeAdminText(new Date(sheet.updatedAt).toLocaleString('pt-BR'))}</small></div>
+                <button type="button" onclick="loadSavedAccountSheet('${escapeAdminText(sheet.id)}')">Carregar</button>
+            </div>`).join('') || '<p class="history-empty">Nenhuma ficha salva nesta conta.</p>';
+    } catch (error) {
+        feedback.innerText = error.message || 'Não foi possível carregar as fichas.';
+        list.innerHTML = '';
+    }
+}
+async function loadSavedAccountSheet(sheetId) {
+    const feedback = document.getElementById('account-feedback');
+    try {
+        const response = await fetch(apiUrl(`/api/sheets/${encodeURIComponent(sheetId)}`), { headers: { Authorization: `Bearer ${authToken}` } });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Não foi possível carregar a ficha.');
+        restoreSheetData(result.sheet);
+        closeAccountMenu();
+        feedback.innerText = `Ficha "${result.name}" carregada.`;
+    } catch (error) {
+        feedback.innerText = error.message || 'Não foi possível carregar a ficha.';
+    }
 }
 function escapeAdminText(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[character]);
@@ -636,7 +687,7 @@ async function loadAdminUsers() {
     const feedback = document.getElementById('admin-feedback');
     list.innerHTML = '<p class="history-empty">Carregando usuários...</p>';
     feedback.innerText = '';
-    const response = await fetch('/api/admin/users', { headers: { Authorization: `Bearer ${authToken}` } });
+    const response = await fetch(apiUrl('/api/admin/users'), { headers: { Authorization: `Bearer ${authToken}` } });
     const result = await response.json();
     if (!response.ok) {
         feedback.innerText = result.error || 'Não foi possível carregar os usuários.';
@@ -647,12 +698,12 @@ async function loadAdminUsers() {
             <div class="admin-user-main"><strong>${escapeAdminText(user.username || 'Conta comum')}</strong><small>${escapeAdminText(user.createdAt ? new Date(user.createdAt).toLocaleString('pt-BR') : '')} | ${escapeAdminText(user.role)}</small></div>
             <input class="admin-user-email" id="admin-email-${escapeAdminText(user.id)}" type="email" value="${escapeAdminText(user.email)}" aria-label="E-mail do usuário">
             <span class="admin-password-mask">${user.passwordMasked}</span>
-            <div class="admin-user-actions"><button type="button" onclick="saveAdminUser('${escapeAdminText(user.id)}')">Salvar e-mail</button><button type="button" onclick="resetAdminPassword('${escapeAdminText(user.id)}')">Nova senha</button>${user.role === 'admin' ? '' : `<button type="button" class="admin-delete-btn" onclick="deleteAdminUser('${escapeAdminText(user.id)}')">Excluir</button>`}</div>
+            <div class="admin-user-actions">${user.id === currentUser?.id ? '<span class="admin-self-label">Seu login</span>' : `<button type="button" onclick="saveAdminUser('${escapeAdminText(user.id)}')">Salvar e-mail</button><button type="button" onclick="resetAdminPassword('${escapeAdminText(user.id)}')">Nova senha</button>${user.role === 'admin' ? '' : `<button type="button" class="admin-delete-btn" onclick="deleteAdminUser('${escapeAdminText(user.id)}')">Excluir</button>`}`}</div>
         </div>`).join('') || '<p class="history-empty">Nenhum usuário cadastrado.</p>';
 }
 async function saveAdminUser(userId) {
     const email = document.getElementById(`admin-email-${userId}`).value;
-    const response = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ email }) });
+    const response = await fetch(apiUrl(`/api/admin/users/${encodeURIComponent(userId)}`), { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ email }) });
     const result = await response.json();
     document.getElementById('admin-feedback').innerText = response.ok ? 'E-mail atualizado.' : (result.error || 'Não foi possível atualizar.');
     if (response.ok) await loadAdminUsers();
@@ -660,13 +711,13 @@ async function saveAdminUser(userId) {
 async function resetAdminPassword(userId) {
     const password = prompt('Digite a nova senha (mínimo de 6 caracteres):');
     if (password === null) return;
-    const response = await fetch(`/api/admin/users/${encodeURIComponent(userId)}/password`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ password }) });
+    const response = await fetch(apiUrl(`/api/admin/users/${encodeURIComponent(userId)}/password`), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ password }) });
     const result = await response.json();
     document.getElementById('admin-feedback').innerText = response.ok ? 'Senha redefinida. A senha anterior não pode ser recuperada.' : (result.error || 'Não foi possível redefinir a senha.');
 }
 async function deleteAdminUser(userId) {
     if (!confirm('Excluir esta conta e a ficha salva associada?')) return;
-    const response = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
+    const response = await fetch(apiUrl(`/api/admin/users/${encodeURIComponent(userId)}`), { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
     const result = await response.json();
     document.getElementById('admin-feedback').innerText = response.ok ? 'Usuário excluído.' : (result.error || 'Não foi possível excluir o usuário.');
     if (response.ok) await loadAdminUsers();
@@ -681,11 +732,13 @@ async function saveSheetToAccount() {
         feedback.innerText = 'Faça login antes de salvar na conta.';
         return;
     }
+    const name = prompt('Nome da ficha:', document.getElementById('char-name')?.value?.trim() || 'Minha ficha');
+    if (!name?.trim()) return;
     feedback.innerText = 'Salvando...';
-    const response = await fetch('/api/sheets/current', {
-        method: 'PUT',
+    const response = await fetch(apiUrl('/api/sheets'), {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ sheet: collectSheetData() })
+        body: JSON.stringify({ name: name.trim(), sheet: collectSheetData() })
     });
     const result = await response.json();
     if (!response.ok) {
@@ -693,24 +746,20 @@ async function saveSheetToAccount() {
         return;
     }
     feedback.innerText = 'Ficha salva na conta.';
+    if (response.ok) closeModal('save-modal');
 }
 async function loadSheetFromAccount() {
-    if (!authToken) return;
-    const response = await fetch('/api/sheets/current', { headers: { Authorization: `Bearer ${authToken}` } });
-    if (response.status === 401) return logout();
-    const result = await response.json();
-    if (result.sheet) restoreSheetData(result.sheet);
+    return;
 }
 async function restoreAuthSession() {
     if (!authToken)
         return updateAuthButton();
     try {
-        const response = await fetch('/api/me', { headers: { Authorization: `Bearer ${authToken}` } });
+        const response = await fetch(apiUrl('/api/me'), { headers: { Authorization: `Bearer ${authToken}` } });
         if (!response.ok)
             return logout();
         const result = await response.json();
         updateAuthButton(result.user);
-        await loadSheetFromAccount();
     }
     catch (error) {
         updateAuthButton();

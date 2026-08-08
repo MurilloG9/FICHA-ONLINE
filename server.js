@@ -41,6 +41,13 @@ database.exec(`
         content TEXT NOT NULL,
         updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS saved_sheets (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        content TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    );
 `);
 const userColumns = database.prepare('PRAGMA table_info(users)').all().map(column => column.name);
 if (!userColumns.includes('username')) database.exec('ALTER TABLE users ADD COLUMN username TEXT');
@@ -60,6 +67,9 @@ function migrateLegacyJson() {
     migrate();
 }
 migrateLegacyJson();
+const legacySheets = database.prepare('SELECT user_id AS userId, content, updated_at AS updatedAt FROM sheets').all();
+const insertLegacySheet = database.prepare('INSERT OR IGNORE INTO saved_sheets (id, user_id, name, content, updated_at) VALUES (?, ?, ?, ?, ?)');
+for (const sheet of legacySheets) insertLegacySheet.run(`legacy-${sheet.userId}`, sheet.userId, 'Ficha salva', sheet.content, sheet.updatedAt);
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
     const hash = crypto.scryptSync(password, salt, 64).toString('hex');
@@ -89,6 +99,12 @@ function passwordsMatch(password, user) {
 function sendJson(response, status, body) {
     response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
     response.end(JSON.stringify(body));
+}
+
+function allowApiOrigin(response) {
+    response.setHeader('Access-Control-Allow-Origin', '*');
+    response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
 }
 
 function getRequestBody(request) {
@@ -166,6 +182,7 @@ async function handleApi(request, response, url) {
         const targetId = decodeURIComponent(userMatch[1]);
         const target = database.prepare('SELECT id, email, username, role FROM users WHERE id = ?').get(targetId);
         if (!target) return sendJson(response, 404, { error: 'Usuário não encontrado.' });
+        if (targetId === user.id) return sendJson(response, 403, { error: 'O login da conta administrativa não pode ser alterado por ela mesma.' });
         if (request.method === 'PATCH' && !userMatch[2]) {
             const body = await getRequestBody(request);
             const email = String(body.email || '').trim().toLowerCase();
@@ -192,17 +209,25 @@ async function handleApi(request, response, url) {
         }
         return sendJson(response, 405, { error: 'Método não permitido.' });
     }
-    if (request.method === 'GET' && url.pathname === '/api/sheets/current') {
-        const sheet = database.prepare('SELECT content, updated_at AS updatedAt FROM sheets WHERE user_id = ?').get(user.id);
-        return sendJson(response, 200, { sheet: sheet ? JSON.parse(sheet.content) : null, updatedAt: sheet?.updatedAt || null });
+    if (request.method === 'GET' && url.pathname === '/api/sheets') {
+        const sheets = database.prepare('SELECT id, name, updated_at AS updatedAt FROM saved_sheets WHERE user_id = ? ORDER BY updated_at DESC').all(user.id);
+        return sendJson(response, 200, { sheets });
     }
-    if (request.method === 'PUT' && url.pathname === '/api/sheets/current') {
+    if (request.method === 'POST' && url.pathname === '/api/sheets') {
         const body = await getRequestBody(request);
         if (!body.sheet || body.sheet.format !== 'ficha-rpg-data') return sendJson(response, 400, { error: 'Formato de ficha inválido.' });
+        const name = String(body.name || '').trim().slice(0, 80);
+        if (!name) return sendJson(response, 400, { error: 'Informe um nome para a ficha.' });
         const updatedAt = new Date().toISOString();
-        database.prepare(`INSERT INTO sheets (user_id, content, updated_at) VALUES (?, ?, ?)
-            ON CONFLICT(user_id) DO UPDATE SET content = excluded.content, updated_at = excluded.updated_at`).run(user.id, JSON.stringify(body.sheet), updatedAt);
-        return sendJson(response, 200, { ok: true });
+        const id = crypto.randomUUID();
+        database.prepare('INSERT INTO saved_sheets (id, user_id, name, content, updated_at) VALUES (?, ?, ?, ?, ?)').run(id, user.id, name, JSON.stringify(body.sheet), updatedAt);
+        return sendJson(response, 201, { ok: true, id, name, updatedAt });
+    }
+    const sheetMatch = url.pathname.match(/^\/api\/sheets\/([^/]+)$/);
+    if (request.method === 'GET' && sheetMatch) {
+        const sheet = database.prepare('SELECT id, name, content, updated_at AS updatedAt FROM saved_sheets WHERE id = ? AND user_id = ?').get(decodeURIComponent(sheetMatch[1]), user.id);
+        if (!sheet) return sendJson(response, 404, { error: 'Ficha não encontrada.' });
+        return sendJson(response, 200, { sheet: JSON.parse(sheet.content), name: sheet.name, updatedAt: sheet.updatedAt });
     }
     return sendJson(response, 404, { error: 'Rota não encontrada.' });
 }
@@ -221,7 +246,11 @@ function serveStatic(request, response, url) {
 const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
     try {
-        if (url.pathname.startsWith('/api/')) await handleApi(request, response, url);
+        if (url.pathname.startsWith('/api/')) {
+            allowApiOrigin(response);
+            if (request.method === 'OPTIONS') return response.writeHead(204).end();
+            await handleApi(request, response, url);
+        }
         else serveStatic(request, response, url);
     } catch (error) {
         console.error(error);

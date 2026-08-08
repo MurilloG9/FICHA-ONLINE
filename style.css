@@ -114,6 +114,57 @@
             overflow-y: auto;
         }
 
+        .account-content {
+            width: min(620px, calc(100vw - 32px));
+            max-height: calc(100vh - 48px);
+            overflow-y: auto;
+        }
+
+        .account-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .saved-sheet-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .saved-sheet-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px;
+            border: 1px solid #383838;
+            border-radius: 5px;
+            background: #181818;
+        }
+
+        .saved-sheet-row div {
+            display: grid;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .saved-sheet-row small,
+        .admin-self-label {
+            color: #aaa;
+            font-size: 11px;
+        }
+
+        .saved-sheet-row button,
+        .admin-self-label {
+            flex: 0 0 auto;
+            padding: 6px 9px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #242424;
+            color: #fff;
+        }
+
         .admin-user-list {
             display: grid;
             gap: 10px;

@@ -23,7 +23,7 @@
                 <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.41 1.41-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V19.6h-2v-.1a1.7 1.7 0 0 0-1.03-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-1.41-1.41.06-.06A1.7 1.7 0 0 0 9.4 15a1.7 1.7 0 0 0-1.55-1.03H7.6v-2h.25A1.7 1.7 0 0 0 9.4 11a1.7 1.7 0 0 0-.34-1.88L9 9.06l1.41-1.41.06.06A1.7 1.7 0 0 0 12.35 8a1.7 1.7 0 0 0 1.03-1.55V6.2h2v.25A1.7 1.7 0 0 0 16.4 8a1.7 1.7 0 0 0 1.88-.34l.06-.06 1.41 1.41-.06.06A1.7 1.7 0 0 0 19.35 11a1.7 1.7 0 0 0 1.55 1.03h.25v2h-.25A1.7 1.7 0 0 0 19.4 15z"></path>
             </svg>
         </button>
-        <button class="file-action-btn login-action" id="login-btn" type="button" onclick="openAuthModal()">Login</button>
+        <button class="file-action-btn login-action" id="login-btn" type="button" onclick="openAccountMenu()">Login</button>
         <button class="file-action-btn admin-users-action" id="admin-users-btn" type="button" onclick="openAdminUsers()" hidden>Usuários</button>
         <div class="settings-panel" id="settings-panel">
             <label class="settings-option" for="sound-mute-toggle">
@@ -506,6 +506,15 @@
             <p class="auth-feedback" id="auth-feedback" role="status"></p>
             <div class="modal-actions"><button class="btn-cancel" type="button" onclick="closeAuthModal()">Cancelar</button><button class="action-purple-btn" id="auth-submit-btn" type="submit">Entrar</button></div>
         </form>
+    </div>
+</div>
+
+<div class="account-modal modal" id="account-modal">
+    <div class="modal-content account-content">
+        <div class="modal-header"><h3 id="account-title">Minha conta</h3><button class="close-btn" type="button" onclick="closeAccountMenu()">✕</button></div>
+        <div class="account-actions"><button class="action-purple-btn" type="button" onclick="openSaveOptions(); closeAccountMenu();">Salvar ficha atual</button><button class="btn-cancel" type="button" onclick="logout(); closeAccountMenu();">Sair da conta</button></div>
+        <p class="auth-feedback" id="account-feedback" role="status"></p>
+        <div class="saved-sheet-list" id="saved-sheet-list"><p class="history-empty">Carregando fichas...</p></div>
     </div>
 </div>
 
