@@ -600,7 +600,7 @@ async function submitAuth(event) {
         });
         const contentType = response.headers.get('content-type') || '';
         if (!contentType.includes('application/json')) {
-            throw new Error('Abra a ficha pelo endereço http://localhost:3000 para usar o login.');
+            throw new Error('A API de contas ainda não foi configurada para este endereço do GitHub Pages. Publique o server.js no Render ou abra http://localhost:3000.');
         }
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Não foi possível autenticar.');
