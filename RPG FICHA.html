@@ -500,7 +500,7 @@
         <div class="modal-header"><h3 id="auth-title">Entrar na conta</h3><button class="close-btn" type="button" onclick="closeAuthModal()">✕</button></div>
         <div class="auth-tabs"><button type="button" class="auth-tab active" id="login-tab" onclick="setAuthMode('login')">Login</button><button type="button" class="auth-tab" id="register-tab" onclick="setAuthMode('register')">Criar conta</button></div>
         <form id="auth-form" onsubmit="submitAuth(event)">
-            <div class="modal-field"><label for="auth-email">E-mail</label><input id="auth-email" type="email" autocomplete="email" required></div>
+            <div class="modal-field"><label for="auth-identifier">Usuário ou e-mail</label><input id="auth-identifier" type="text" autocomplete="username" required></div>
             <div class="modal-field"><label for="auth-password">Senha</label><input id="auth-password" type="password" minlength="6" autocomplete="current-password" required></div>
             <p class="auth-feedback" id="auth-feedback" role="status"></p>
             <div class="modal-actions"><button class="btn-cancel" type="button" onclick="closeAuthModal()">Cancelar</button><button class="action-purple-btn" id="auth-submit-btn" type="submit">Entrar</button></div>

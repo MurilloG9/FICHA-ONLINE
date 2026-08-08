@@ -692,7 +692,7 @@ interface Element {
             const response = await fetch(`/api/${authMode}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: document.getElementById('auth-email').value, password: document.getElementById('auth-password').value })
+                body: JSON.stringify({ username: document.getElementById('auth-identifier').value, password: document.getElementById('auth-password').value })
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'Não foi possível autenticar.');
@@ -713,10 +713,10 @@ interface Element {
         updateAuthButton();
     }
 
-    function updateAuthButton(user?: { email: string }) {
+    function updateAuthButton(user?: { username?: string; email?: string }) {
         const button = document.getElementById('login-btn');
         if (!button) return;
-        button.innerText = user?.email ? user.email.split('@')[0] : (authToken ? 'Conta' : 'Login');
+        button.innerText = user?.username || user?.email?.split('@')[0] || (authToken ? 'Conta' : 'Login');
         button.title = authToken ? 'Sair da conta' : 'Entrar';
     }
 

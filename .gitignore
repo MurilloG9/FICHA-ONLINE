@@ -3,3 +3,4 @@ data/database.json
 data/*.sqlite
 data/*.sqlite-shm
 data/*.sqlite-wal
+.env

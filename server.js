@@ -4,7 +4,19 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const Database = require('better-sqlite3');
 
+function loadLocalEnv() {
+    const envFile = path.join(__dirname, '.env');
+    if (!fs.existsSync(envFile)) return;
+    for (const line of fs.readFileSync(envFile, 'utf8').split(/\r?\n/)) {
+        const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+        if (match && !process.env[match[1]]) process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, '');
+    }
+}
+loadLocalEnv();
+
 const PORT = Number(process.env.PORT) || 3000;
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'ADMIN-Suri';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, 'data');
 const DATABASE_FILE = path.join(DATA_DIR, 'ficha-online.sqlite');
@@ -18,6 +30,8 @@ database.exec(`
     CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         email TEXT NOT NULL UNIQUE,
+        username TEXT UNIQUE,
+        role TEXT NOT NULL DEFAULT 'user',
         password_salt TEXT NOT NULL,
         password_hash TEXT NOT NULL,
         created_at TEXT NOT NULL
@@ -28,6 +42,10 @@ database.exec(`
         updated_at TEXT NOT NULL
     );
 `);
+const userColumns = database.prepare('PRAGMA table_info(users)').all().map(column => column.name);
+if (!userColumns.includes('username')) database.exec('ALTER TABLE users ADD COLUMN username TEXT');
+if (!userColumns.includes('role')) database.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'");
+database.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique ON users(username) WHERE username IS NOT NULL');
 
 function migrateLegacyJson() {
     const legacyFile = path.join(DATA_DIR, 'database.json');
@@ -47,6 +65,21 @@ function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
     const hash = crypto.scryptSync(password, salt, 64).toString('hex');
     return { salt, hash };
 }
+
+function ensureAdminUser() {
+    if (!ADMIN_PASSWORD) return;
+    const passwordData = hashPassword(ADMIN_PASSWORD);
+    const existingAdmin = database.prepare('SELECT id FROM users WHERE username = ?').get(ADMIN_USERNAME);
+    if (existingAdmin) {
+        database.prepare("UPDATE users SET password_salt = ?, password_hash = ?, role = 'admin' WHERE id = ?")
+            .run(passwordData.salt, passwordData.hash, existingAdmin.id);
+        return;
+    }
+    database.prepare(`INSERT INTO users (id, email, username, role, password_salt, password_hash, created_at)
+        VALUES (?, ?, ?, 'admin', ?, ?, ?)`)
+        .run('admin-suri', 'admin@local.invalid', ADMIN_USERNAME, passwordData.salt, passwordData.hash, new Date().toISOString());
+}
+ensureAdminUser();
 
 function passwordsMatch(password, user) {
     const candidate = hashPassword(password, user.passwordSalt).hash;
@@ -74,15 +107,24 @@ function getUser(request) {
     const token = request.headers.authorization?.replace('Bearer ', '');
     const userId = token && sessions.get(token);
     if (!userId) return null;
-    const user = database.prepare('SELECT id, email, password_salt AS passwordSalt, password_hash AS passwordHash, created_at AS createdAt FROM users WHERE id = ?').get(userId);
+    const user = database.prepare('SELECT id, email, username, role, password_salt AS passwordSalt, password_hash AS passwordHash, created_at AS createdAt FROM users WHERE id = ?').get(userId);
     return user || null;
 }
 
 async function handleApi(request, response, url) {
     if (request.method === 'POST' && (url.pathname === '/api/register' || url.pathname === '/api/login')) {
         const body = await getRequestBody(request);
-        const email = String(body.email || '').trim().toLowerCase();
+        const identifier = String(body.username || body.email || '').trim();
         const password = String(body.password || '');
+        const isAdminLogin = url.pathname === '/api/login' && identifier === ADMIN_USERNAME;
+        if (isAdminLogin) {
+            const admin = ADMIN_PASSWORD && database.prepare('SELECT id, email, username, role, password_salt AS passwordSalt, password_hash AS passwordHash FROM users WHERE username = ? AND role = \'admin\'').get(ADMIN_USERNAME);
+            if (!admin || !passwordsMatch(password, admin)) return sendJson(response, 401, { error: 'Usuário ou senha incorretos.' });
+            const token = crypto.randomBytes(32).toString('hex');
+            sessions.set(token, admin.id);
+            return sendJson(response, 200, { token, user: { id: admin.id, username: admin.username, email: admin.email, role: admin.role } });
+        }
+        const email = identifier.toLowerCase();
         if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 6) {
             return sendJson(response, 400, { error: 'Informe um e-mail válido e uma senha com pelo menos 6 caracteres.' });
         }
@@ -100,7 +142,7 @@ async function handleApi(request, response, url) {
         }
         const token = crypto.randomBytes(32).toString('hex');
         sessions.set(token, user.id);
-        return sendJson(response, 200, { token, user: { id: user.id, email: user.email } });
+        return sendJson(response, 200, { token, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
     }
     if (request.method === 'POST' && url.pathname === '/api/logout') {
         const token = request.headers.authorization?.replace('Bearer ', '');
@@ -110,7 +152,7 @@ async function handleApi(request, response, url) {
     const user = getUser(request);
     if (!user) return sendJson(response, 401, { error: 'Faça login para continuar.' });
     if (request.method === 'GET' && url.pathname === '/api/me') {
-        return sendJson(response, 200, { user: { id: user.id, email: user.email } });
+        return sendJson(response, 200, { user: { id: user.id, username: user.username, email: user.email, role: user.role } });
     }
     if (request.method === 'GET' && url.pathname === '/api/sheets/current') {
         const sheet = database.prepare('SELECT content, updated_at AS updatedAt FROM sheets WHERE user_id = ?').get(user.id);
