@@ -62,6 +62,110 @@ interface Element {
         Fluido: ['Mago', 'Invocador', 'Produtor', 'Harmonizador']
     };
 
+    const classBenefits = {
+        Fortalecedor: {
+            hp: 5, san: 1, ea: 2, intellect: 1,
+            fixed: [],
+            groups: [['Luta', 'Furtividade'], ['Fortitude', 'Reflexos']]
+        },
+        Preciso: {
+            hp: 3, san: 3, ea: 2, intellect: 1,
+            fixed: ['Pontaria'],
+            groups: [['Reflexos', 'Percepção'], skillsData.map(skill => skill.name)]
+        },
+        Fluido: {
+            hp: 2, san: 3, ea: 3, intellect: 1,
+            fixed: ['Ocultismo'],
+            groups: [['Ciências', 'Religião'], skillsData.map(skill => skill.name)]
+        }
+    };
+
+    function getPrimaryClass() {
+        const select = document.getElementById('char-class-primary');
+        if (!select) return '';
+        return Object.keys(classBenefits).includes(select.dataset.primary) ? select.dataset.primary : select.value;
+    }
+
+    function getClassBenefit(primary = getPrimaryClass()) {
+        return classBenefits[primary] || { hp: 0, san: 0, ea: 0, intellect: 0, fixed: [], groups: [] };
+    }
+
+    function getClassChoice(id, fallback = '') {
+        return document.getElementById(id)?.value || fallback;
+    }
+
+    function renderClassBenefitsPanel(primary) {
+        const menu = document.getElementById('class-picker-menu');
+        const benefit = getClassBenefit(primary);
+        if (!menu || !primary || !classBenefits[primary]) return;
+
+        let panel = document.getElementById('class-benefits-panel') as HTMLElement | null;
+        if (!panel) {
+            panel = document.createElement('div');
+            panel.id = 'class-benefits-panel';
+            panel.className = 'class-benefits-panel';
+            menu.appendChild(panel);
+        }
+
+        const selectOptions = (values, selected) => values.map(skill =>
+            `<option value="${skill}" ${skill === selected ? 'selected' : ''}>${skill} +2</option>`
+        ).join('');
+        const savedChoices = benefit.groups.map((_, index) => getClassChoice(`class-choice-${index}`));
+        const savedFree = Array.from({ length: 3 }, (_, index) => getClassChoice(`class-free-${index}`));
+
+        panel.innerHTML = `
+            <div class="class-benefits-title">Benefícios de ${primary}</div>
+            <div class="class-benefits-summary">Vida +${benefit.hp} | Sanidade +${benefit.san} | EA +${benefit.ea} | INT +${benefit.intellect}</div>
+            ${benefit.fixed.length ? `<div class="class-benefits-fixed">Perícia garantida: ${benefit.fixed.map(skill => `${skill} +2`).join(', ')}</div>` : ''}
+            ${benefit.groups.map((group, index) => `
+                <label class="class-benefit-choice">Escolha uma perícia +2:
+                    <select id="class-choice-${index}" onchange="applyClassBenefits()">
+                        <option value="">Selecionar</option>
+                        ${selectOptions(group, savedChoices[index])}
+                    </select>
+                </label>
+            `).join('')}
+            ${[0, 1, 2].map(index => `
+                <label class="class-benefit-choice">Perícia livre ${index + 1} +2:
+                    <select id="class-free-${index}" onchange="applyClassBenefits()">
+                        <option value="">Selecionar</option>
+                        ${selectOptions(skillsData.map(skill => skill.name), savedFree[index])}
+                    </select>
+                </label>
+            `).join('')}
+        `;
+    }
+
+    function applyClassBenefits() {
+        const primary = getPrimaryClass();
+        const benefit = getClassBenefit(primary);
+        const classBonusBySkill = {};
+
+        benefit.fixed.forEach(skill => classBonusBySkill[skill] = (classBonusBySkill[skill] || 0) + 2);
+        benefit.groups.forEach((_, index) => {
+            const selected = getClassChoice(`class-choice-${index}`);
+            if (selected) classBonusBySkill[selected] = (classBonusBySkill[selected] || 0) + 2;
+        });
+        [0, 1, 2].forEach(index => {
+            const selected = getClassChoice(`class-free-${index}`);
+            if (selected) classBonusBySkill[selected] = (classBonusBySkill[selected] || 0) + 2;
+        });
+
+        skillsData.forEach((skill, index) => {
+            const input = document.getElementById(`skill-outros-${index}`);
+            input.dataset.classBonus = String(classBonusBySkill[skill.name] || 0);
+            updateSkill(index);
+        });
+
+        const intellectInput = document.getElementById('attr-int');
+        const previousIntellectBonus = parseInt(intellectInput.dataset.classBonus) || 0;
+        const baseIntellect = Math.max(0, parseInt(intellectInput.value) - previousIntellectBonus);
+        const intellectBonus = benefit.intellect || 0;
+        intellectInput.dataset.classBonus = String(intellectBonus);
+        intellectInput.value = String(Math.min(5, baseIntellect + intellectBonus));
+        calculateSheet(true);
+    }
+
     function updateClassSelection() {
         const primarySelect = document.getElementById('char-class-primary');
         const evolutionSelect = document.getElementById('char-class-evolution');
@@ -97,6 +201,8 @@ interface Element {
             card.onclick = () => chooseClass(className, showEvolutions);
             grid.appendChild(card);
         });
+
+        if (!showEvolutions) renderClassBenefitsPanel(primary);
     }
 
     function toggleClassMenu(event, showEvolutions = false) {
@@ -121,6 +227,8 @@ interface Element {
             primarySelect.value = className;
         }
         updateClassEvolutionOptions();
+        renderClassMenu(false);
+        applyClassBenefits();
         closeClassMenu();
     }
 
@@ -321,7 +429,8 @@ interface Element {
     function updateSkill(index) {
         const treino = parseInt(document.getElementById(`skill-treino-${index}`).value) || 0;
         const outros = parseInt(document.getElementById(`skill-outros-${index}`).value) || 0;
-        const bonus = treino + outros;
+        const classBonus = parseInt(document.getElementById(`skill-outros-${index}`).dataset.classBonus) || 0;
+        const bonus = treino + outros + classBonus;
 
         document.getElementById(`skill-bonus-${index}`).innerText = `( ${bonus} )`;
 
@@ -409,6 +518,7 @@ interface Element {
         const presence = parseInt(document.getElementById('attr-pre').value) || 0;
         const level = parseInt(document.getElementById('char-level').value) || 0;
         updateClassEvolutionOptions();
+        const classBenefit = getClassBenefit();
         const hpOther = parseInt(document.getElementById('hp-other').value) || 0;
         const sanOther = parseInt(document.getElementById('san-other').value) || 0;
         const eaOther = parseInt(document.getElementById('ea-other').value) || 0;
@@ -416,9 +526,9 @@ interface Element {
         const outros = parseInt(document.getElementById('def-outros').value) || 0;
 
         const totalDef = 10 + agi + equip + outros;
-        document.getElementById('hp-max').value = String(10 + (vigor * 5) + hpOther);
-        document.getElementById('san-max').value = String(8 + (presence * 3) + sanOther);
-        document.getElementById('ea-max').value = String(5 + (level * 2) + eaOther);
+        document.getElementById('hp-max').value = String(10 + (vigor * 5) + hpOther + classBenefit.hp);
+        document.getElementById('san-max').value = String(8 + (presence * 3) + sanOther + classBenefit.san);
+        document.getElementById('ea-max').value = String(5 + (level * 2) + eaOther + classBenefit.ea);
 
         ['hp', 'san', 'ea'].forEach(type => {
             const currentInput = document.getElementById(`${type}-cur`);
@@ -1073,6 +1183,13 @@ interface Element {
         }
 
         document.querySelectorAll('.skill-row').forEach((row, index) => updateSkill(index));
+        updateClassEvolutionOptions();
+        renderClassMenu(false);
+        Object.entries(sheetData.fields || {}).forEach(([id, value]) => {
+            const field = document.getElementById(id);
+            if (field && (id.startsWith('class-choice-') || id.startsWith('class-free-'))) field.value = String(value);
+        });
+        applyClassBenefits();
         calculateSheet();
         updateBars();
     }

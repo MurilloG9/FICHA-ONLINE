@@ -371,6 +371,44 @@
             gap: 16px;
         }
 
+        .class-benefits-panel {
+            display: grid;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px solid #444;
+        }
+
+        .class-benefits-title {
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .class-benefits-summary,
+        .class-benefits-fixed {
+            color: #bbb;
+            font-size: 12px;
+        }
+
+        .class-benefit-choice {
+            display: grid;
+            grid-template-columns: 1fr 150px;
+            align-items: center;
+            gap: 10px;
+            color: #ddd;
+            font-size: 12px;
+        }
+
+        .class-benefit-choice select {
+            width: 100%;
+            padding: 5px 6px;
+            border: 1px solid #555;
+            border-radius: 3px;
+            background: #181818;
+            color: #fff;
+        }
+
         .class-picker-card {
             min-height: 110px;
             padding: 18px 12px;
