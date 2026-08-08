@@ -65,19 +65,16 @@ interface Element {
     const classBenefits = {
         Fortalecedor: {
             hp: 5, san: 1, ea: 2,
-            freeChoices: 3,
             fixed: [],
             groups: [['Luta', 'Furtividade'], ['Fortitude', 'Reflexos']]
         },
         Preciso: {
             hp: 3, san: 3, ea: 2,
-            freeChoices: 3,
             fixed: ['Pontaria'],
             groups: [['Reflexos', 'Percepção'], skillsData.map(skill => skill.name)]
         },
         Fluido: {
             hp: 2, san: 3, ea: 3,
-            freeChoices: 3,
             fixed: ['Ocultismo'],
             groups: [['Ciências', 'Religião'], skillsData.map(skill => skill.name)]
         }
@@ -90,7 +87,7 @@ interface Element {
     }
 
     function getClassBenefit(primary = getPrimaryClass()) {
-        return classBenefits[primary] || { hp: 0, san: 0, ea: 0, freeChoices: 0, fixed: [], groups: [] };
+        return classBenefits[primary] || { hp: 0, san: 0, ea: 0, fixed: [], groups: [] };
     }
 
     function getClassChoice(id, fallback = '') {
@@ -114,27 +111,16 @@ interface Element {
             `<option value="${skill}" ${skill === selected ? 'selected' : ''}>${skill} +2</option>`
         ).join('');
         const savedChoices = benefit.groups.map((_, index) => getClassChoice(`class-choice-${index}`));
-        const intellect = parseInt(document.getElementById('attr-int').value) || 0;
-        const freeChoiceCount = benefit.freeChoices + intellect;
-        const savedFree = Array.from({ length: freeChoiceCount }, (_, index) => getClassChoice(`class-free-${index}`));
 
         panel.innerHTML = `
             <div class="class-benefits-title">Benefícios de ${primary}</div>
-            <div class="class-benefits-summary">Vida +${benefit.hp} | Sanidade +${benefit.san} | EA +${benefit.ea} | ${freeChoiceCount} perícias livres</div>
+            <div class="class-benefits-summary">Vida +${benefit.hp} | Sanidade +${benefit.san} | EA +${benefit.ea}</div>
             ${benefit.fixed.length ? `<div class="class-benefits-fixed">Perícia garantida: ${benefit.fixed.map(skill => `${skill} +2`).join(', ')}</div>` : ''}
             ${benefit.groups.map((group, index) => `
                 <label class="class-benefit-choice">Escolha uma perícia +2:
                     <select id="class-choice-${index}" onchange="applyClassBenefits()">
                         <option value="">Selecionar</option>
                         ${selectOptions(group, savedChoices[index])}
-                    </select>
-                </label>
-            `).join('')}
-            ${Array.from({ length: freeChoiceCount }, (_, index) => index).map(index => `
-                <label class="class-benefit-choice">Perícia livre ${index + 1} +2:
-                    <select id="class-free-${index}" onchange="applyClassBenefits()">
-                        <option value="">Selecionar</option>
-                        ${selectOptions(skillsData.map(skill => skill.name), savedFree[index])}
                     </select>
                 </label>
             `).join('')}
@@ -151,19 +137,14 @@ interface Element {
             const selected = getClassChoice(`class-choice-${index}`);
             if (selected) classBonusBySkill[selected] = (classBonusBySkill[selected] || 0) + 2;
         });
-        const intellect = parseInt(document.getElementById('attr-int').value) || 0;
-        const freeChoiceCount = benefit.freeChoices + intellect;
-        Array.from({ length: freeChoiceCount }, (_, index) => index).forEach(index => {
-            const selected = getClassChoice(`class-free-${index}`);
-            if (selected) classBonusBySkill[selected] = (classBonusBySkill[selected] || 0) + 2;
-        });
-
         skillsData.forEach((skill, index) => {
             const input = document.getElementById(`skill-outros-${index}`);
             input.dataset.classBonus = String(classBonusBySkill[skill.name] || 0);
             updateSkill(index);
         });
 
+        const allChoicesSelected = benefit.groups.every((_, index) => getClassChoice(`class-choice-${index}`));
+        if (allChoicesSelected) closeClassMenu();
         calculateSheet(true);
     }
 
@@ -199,7 +180,10 @@ interface Element {
             card.type = 'button';
             card.className = 'class-picker-card';
             card.innerText = className;
-            card.onclick = () => chooseClass(className, showEvolutions);
+            card.onclick = event => {
+                event.stopPropagation();
+                chooseClass(className, showEvolutions);
+            };
             grid.appendChild(card);
         });
 
@@ -224,13 +208,13 @@ interface Element {
         if (isEvolution) {
             primarySelect.value = className;
         } else {
+            document.querySelectorAll('[id^="class-choice-"]').forEach(choice => choice.value = '');
             primarySelect.dataset.primary = className;
             primarySelect.value = className;
         }
         updateClassEvolutionOptions();
         renderClassMenu(false);
         applyClassBenefits();
-        closeClassMenu();
     }
 
     function updateClassEvolutionOptions() {
