@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha RPG - Viewpoint</title>
+        <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sheet-container">
+
+    <div class="header-title-box">
+        <div class="file-actions">
+            <button class="file-action-btn" type="button" onclick="downloadSheet()">Salvar ficha</button>
+            <button class="file-action-btn" type="button" onclick="document.getElementById('sheet-file-input').click()">Abrir ficha</button>
+            <button class="file-action-btn" type="button" onclick="toggleHistory()">Histórico</button>
+            <input type="file" id="sheet-file-input" accept=".txt,.html,text/plain,text/html" hidden onchange="loadSavedSheet(event)">
+        </div>
+        <button class="file-action-btn settings-action" type="button" onclick="toggleSettings(event)" title="Configurações" aria-label="Configurações">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.41 1.41-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V19.6h-2v-.1a1.7 1.7 0 0 0-1.03-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-1.41-1.41.06-.06A1.7 1.7 0 0 0 9.4 15a1.7 1.7 0 0 0-1.55-1.03H7.6v-2h.25A1.7 1.7 0 0 0 9.4 11a1.7 1.7 0 0 0-.34-1.88L9 9.06l1.41-1.41.06.06A1.7 1.7 0 0 0 12.35 8a1.7 1.7 0 0 0 1.03-1.55V6.2h2v.25A1.7 1.7 0 0 0 16.4 8a1.7 1.7 0 0 0 1.88-.34l.06-.06 1.41 1.41-.06.06A1.7 1.7 0 0 0 19.35 11a1.7 1.7 0 0 0 1.55 1.03h.25v2h-.25A1.7 1.7 0 0 0 19.4 15z"></path>
+            </svg>
+        </button>
+        <div class="settings-panel" id="settings-panel">
+            <label class="settings-option" for="sound-mute-toggle">
+                <span>Mutar sons</span>
+                <input type="checkbox" id="sound-mute-toggle" onchange="toggleSoundMute(this.checked)">
+            </label>
+        </div>
+        <div class="brand-section">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <div class="brand-title">Viewpoint</div>
+        </div>
+    </div>
+
+    <div class="sheet-body">
+
+        <!-- COLUNA ESQUERDA: INFOS, STATUS, VITAIS E DEFESA -->
+        <div class="left-column">
+            
+            <!-- DADOS DO PERSONAGEM -->
+            <div class="info-card">
+                <div class="info-fields">
+                    <div class="field-group">
+                        <label>Nome:</label>
+                        <input type="text" id="char-name">
+                    </div>
+                    <div class="field-group">
+                        <label>Idade:</label>
+                        <input type="text" id="char-age">
+                    </div>
+                    <div class="field-group">
+                        <label>Classe:</label>
+                        <div class="class-selector">
+                            <button type="button" class="class-picker-trigger" id="class-picker-trigger" onclick="toggleClassMenu(event)">Selecionar</button>
+                            <div class="class-picker-menu" id="class-picker-menu">
+                                <div class="class-picker-header">
+                                    <span id="class-picker-title">Escolha sua classe</span>
+                                    <button type="button" class="class-picker-close" onclick="closeClassMenu(event)" aria-label="Fechar">&times;</button>
+                                </div>
+                                <div class="class-picker-grid" id="class-picker-grid"></div>
+                            </div>
+                            <select id="char-class-primary" onchange="updateClassEvolutionOptions()" hidden>
+                                <option value="">Selecionar</option>
+                                <option value="Fortalecedor">Fortalecedor</option>
+                                <option value="Preciso">Preciso</option>
+                                <option value="Fluido">Fluido</option>
+                            </select>
+                            <button type="button" class="class-evolution-btn" id="class-evolution-btn" onclick="toggleClassEvolution(event)" title="Escolher evolução" aria-label="Escolher evolução">
+                                <span class="class-arrow"></span>
+                                <span class="class-arrow"></span>
+                            </button>
+                            <input type="hidden" id="char-class-evolution">
+                            <input type="hidden" id="char-class">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="avatar-box">
+                    <div class="avatar-frame" id="avatar-frame" onclick="document.getElementById('avatar-input').click();">
+                        <svg width="45" height="45" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <input type="file" id="avatar-input" accept="image/*" style="display: none;" onchange="loadAvatar(event)">
+                    
+                    <div class="level-tag">
+                        Nível: <input type="number" id="char-level" value="0" min="0" oninput="calculateSheet(true)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATUS -->
+            <div class="status-card">
+                <div class="status-header">
+                    <h2>STATUS</h2>
+                    <button class="edit-btn" id="edit-status-btn" onclick="toggleStatusEdit()" title="Editar Status">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="attributes-grid">
+                    
+                    <!-- FOR -->
+                    <div class="attr-box" onclick="handleAttrClick('FOR', 'attr-for')">
+                        <div class="d20-svg">
+                            <svg viewBox="0 0 100 100" fill="none" stroke="#aaa" stroke-width="3">
+                                <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" />
+                                <line x1="50" y1="5" x2="50" y2="95" />
+                                <line x1="10" y1="25" x2="90" y2="75" />
+                                <line x1="10" y1="75" x2="90" y2="25" />
+                            </svg>
+                            <input type="number" id="attr-for" value="" max="5" oninput="calculateSheet(true)" readonly>
+                        </div>
+                        <span class="attr-label">For</span>
+                    </div>
+
+                    <!-- VIGOR -->
+                    <div class="attr-box" onclick="handleAttrClick('VIG', 'attr-vigor')">
+                        <div class="d20-svg">
+                            <svg viewBox="0 0 100 100" fill="none" stroke="#aaa" stroke-width="3">
+                                <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" />
+                                <line x1="50" y1="5" x2="50" y2="95" />
+                                <line x1="10" y1="25" x2="90" y2="75" />
+                                <line x1="10" y1="75" x2="90" y2="25" />
+                            </svg>
+                            <input type="number" id="attr-vigor" value="" max="5" oninput="calculateSheet(true)" readonly>
+                        </div>
+                        <span class="attr-label">Vigor</span>
+                    </div>
+
+                    <!-- AGI -->
+                    <div class="attr-box" onclick="handleAttrClick('AGI', 'attr-agi')">
+                        <div class="d20-svg">
+                            <svg viewBox="0 0 100 100" fill="none" stroke="#aaa" stroke-width="3">
+                                <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" />
+                                <line x1="50" y1="5" x2="50" y2="95" />
+                                <line x1="10" y1="25" x2="90" y2="75" />
+                                <line x1="10" y1="75" x2="90" y2="25" />
+                            </svg>
+                            <input type="number" id="attr-agi" value="" max="5" oninput="calculateSheet(true)" readonly>
+                        </div>
+                        <span class="attr-label">Agi</span>
+                    </div>
+
+                    <!-- INT -->
+                    <div class="attr-box" onclick="handleAttrClick('INT', 'attr-int')">
+                        <div class="d20-svg">
+                            <svg viewBox="0 0 100 100" fill="none" stroke="#aaa" stroke-width="3">
+                                <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" />
+                                <line x1="50" y1="5" x2="50" y2="95" />
+                                <line x1="10" y1="25" x2="90" y2="75" />
+                                <line x1="10" y1="75" x2="90" y2="25" />
+                            </svg>
+                            <input type="number" id="attr-int" value="" max="5" oninput="calculateSheet(true)" readonly>
+                        </div>
+                        <span class="attr-label">Int</span>
+                    </div>
+
+                    <!-- PRE -->
+                    <div class="attr-box" onclick="handleAttrClick('PRE', 'attr-pre')">
+                        <div class="d20-svg">
+                            <svg viewBox="0 0 100 100" fill="none" stroke="#aaa" stroke-width="3">
+                                <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" />
+                                <line x1="50" y1="5" x2="50" y2="95" />
+                                <line x1="10" y1="25" x2="90" y2="75" />
+                                <line x1="10" y1="75" x2="90" y2="25" />
+                            </svg>
+                            <input type="number" id="attr-pre" value="" max="5" oninput="calculateSheet(true)" readonly>
+                        </div>
+                        <span class="attr-label">Pre</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- VITAIS -->
+            <div class="vitals-section">
+                
+                <div class="vital-bar-container">
+                    <div class="vital-fill fill-hp" id="hp-fill"></div>
+                    <div class="vital-content">
+                        <span class="vital-title">VIDA</span>
+                        <div class="vital-controls">
+                            <button class="vital-btn" onclick="adjustVital('hp', -5)">&lt;&lt;</button>
+                            <button class="vital-btn" onclick="adjustVital('hp', -1)">&lt;</button>
+                            <div class="vital-values">
+                                <input type="number" id="hp-cur" value="" oninput="updateBars()">
+                                <span>/</span>
+                                <input type="number" id="hp-max" value="10" readonly title="Base 10 + Vigor x 5 + outras fontes">
+                                <input type="number" id="hp-other" value="0" oninput="calculateSheet()" title="Outras fontes">
+                            </div>
+                            <button class="vital-btn" onclick="adjustVital('hp', 1)">&gt;</button>
+                            <button class="vital-btn" onclick="adjustVital('hp', 5)">&gt;&gt;</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vital-bar-container">
+                    <div class="vital-fill fill-san" id="san-fill"></div>
+                    <div class="vital-content">
+                        <span class="vital-title">SANIDADE</span>
+                        <div class="vital-controls">
+                            <button class="vital-btn" onclick="adjustVital('san', -5)">&lt;&lt;</button>
+                            <button class="vital-btn" onclick="adjustVital('san', -1)">&lt;</button>
+                            <div class="vital-values">
+                                <input type="number" id="san-cur" value="" oninput="updateBars()">
+                                <span>/</span>
+                                <input type="number" id="san-max" value="8" readonly title="Base 8 + Presença x 3 + outras fontes">
+                                <input type="number" id="san-other" value="0" oninput="calculateSheet()" title="Outras fontes">
+                            </div>
+                            <button class="vital-btn" onclick="adjustVital('san', 1)">&gt;</button>
+                            <button class="vital-btn" onclick="adjustVital('san', 5)">&gt;&gt;</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vital-bar-container">
+                    <div class="vital-fill fill-ea" id="ea-fill"></div>
+                    <div class="vital-content">
+                        <span class="vital-title">ENERGIA DA ALMA (EA)</span>
+                        <div class="vital-controls">
+                            <button class="vital-btn" onclick="adjustVital('ea', -5)">&lt;&lt;</button>
+                            <button class="vital-btn" onclick="adjustVital('ea', -1)">&lt;</button>
+                            <div class="vital-values">
+                                <input type="number" id="ea-cur" value="" oninput="updateBars()">
+                                <span>/</span>
+                                <input type="number" id="ea-max" value="5" readonly title="Base 5 + Nível x 2 + outras fontes">
+                                <input type="number" id="ea-other" value="0" oninput="calculateSheet()" title="Outras fontes">
+                            </div>
+                            <button class="vital-btn" onclick="adjustVital('ea', 1)">&gt;</button>
+                            <button class="vital-btn" onclick="adjustVital('ea', 5)">&gt;&gt;</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- SEÇÃO DE DEFESA E COMBATE -->
+            <div class="combat-card">
+                <div class="defense-header">
+                    <div class="shield-box">
+                        <svg viewBox="0 0 100 120" fill="none" stroke="white" stroke-width="4">
+                            <path d="M 50,5 L 90,20 L 90,60 C 90,90 50,115 50,115 C 50,115 10,90 10,60 L 10,20 Z"/>
+                        </svg>
+                        <span class="shield-value" id="def-total">10</span>
+                    </div>
+
+                    <div class="def-formula">
+                        <div class="def-formula-title">DEFESA</div>
+                        <div class="def-inputs">
+                            <span>= 10 + AGI +</span>
+                            <input type="number" id="def-equip" value="0" oninput="calculateSheet()">
+                            <span>+</span>
+                            <input type="number" id="def-outros" value="0" oninput="calculateSheet()">
+                        </div>
+                    </div>
+
+                    <div class="sub-stats">
+                        <div class="sub-stat-item">
+                            <span>BLOQUEIO</span>
+                            <input type="number" id="def-bloqueio" value="0">
+                        </div>
+                        <div class="sub-stat-item">
+                            <span>ESQUIVA</span>
+                            <div id="def-esquiva">10</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="combat-fields">
+                    <div class="combat-field-group">
+                        <label>PROTEÇÃO</label>
+                        <input type="text" id="protection">
+                    </div>
+                    <div class="combat-field-group">
+                        <label>RESISTÊNCIAS</label>
+                        <input type="text" id="resistances">
+                    </div>
+                    <div class="combat-field-group">
+                        <label>PROFICIÊNCIAS</label>
+                        <input type="text" id="proficiencies">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SEÇÃO DIREITA: PERÍCIAS (ESQUERDA) E PAINEL COM ABAS (DIREITA) -->
+        <div class="right-section">
+
+            <!-- PERÍCIAS -->
+            <div class="skills-card">
+                <div class="skills-header-row">
+                    <span>PERÍCIA</span>
+                    <span>DADOS</span>
+                    <span>BÔNUS</span>
+                    <span>TREINO</span>
+                    <span>OUTROS</span>
+                </div>
+
+                <div class="skills-list" id="skills-container"></div>
+            </div>
+
+            <!-- NOVO PAINEL COM ABAS (COMBATE, HABILIDADES, INVENTÁRIO, DESCRIÇÃO) -->
+            <div class="tabbed-panel-card">
+                <div class="tabs-header">
+                    <button class="tab-btn active" onclick="switchTab('combate')">COMBATE</button>
+                    <button class="tab-btn" onclick="switchTab('habilidades')">HABILIDADES</button>
+                    <button class="tab-btn" onclick="switchTab('inventario')">INVENTÁRIO</button>
+                    <button class="tab-btn" onclick="switchTab('descricao')">DESCRIÇÃO</button>
+                </div>
+
+                <!-- CAMPO DE ROLAR DADOS -->
+                <div class="dice-roll-bar">
+                    <input type="text" id="dice-custom-input" placeholder="Rolar dados (ex: 1d20+5, 2d6)" onkeydown="handleDiceKeyDown(event)">
+                    <button class="dice-btn-icon" onclick="rollCustomDiceInput()" title="Rolar Dados">
+                        <svg width="22" height="22" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6">
+                            <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" />
+                            <line x1="50" y1="5" x2="50" y2="95" />
+                            <line x1="10" y1="25" x2="90" y2="75" />
+                            <line x1="10" y1="75" x2="90" y2="25" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- ABA COMBATE -->
+                <div class="tab-content active" id="tab-combate">
+                    <div class="action-bar">
+                        <button class="action-purple-btn" onclick="openAttackModal()">Novo Ataque</button>
+                    </div>
+                    <div id="attacks-container">
+                        <div class="empty-placeholder" id="empty-attacks-msg">Você ainda não possui ataques</div>
+                    </div>
+                </div>
+
+                <!-- ABA HABILIDADES -->
+                <div class="tab-content" id="tab-habilidades">
+                    <div class="action-bar">
+                        <button class="action-purple-btn" onclick="openAbilityModal()">Nova Habilidade</button>
+                    </div>
+                    <div id="abilities-container">
+                        <div class="empty-placeholder" id="empty-abilities-msg">Você ainda não possui habilidades</div>
+                    </div>
+                </div>
+
+                <!-- ABA INVENTÁRIO -->
+                <div class="tab-content" id="tab-inventario">
+                    <div class="inventory-stats">
+                        <div class="inventory-stat">
+                            <label>LIMITE DE ITENS</label>
+                            <div class="inventory-boxes">
+                                <div class="inventory-box"><input type="number" value="0"></div>
+                                <div class="inventory-box"><input type="number" value="0"></div>
+                                <div class="inventory-box"><input type="number" value="0"></div>
+                                <div class="inventory-box"><input type="number" value="0"></div>
+                            </div>
+                        </div>
+                        <div class="inventory-stat">
+                            <label>NO INVENTÁRIO</label>
+                            <div class="inventory-boxes">
+                                <div class="inventory-box"><input type="number" value="0"></div>
+                                <div class="inventory-box"><input type="number" value="0"></div>
+                                <div class="inventory-box"><input type="number" value="0"></div>
+                                <div class="inventory-box"><input type="number" value="0"></div>
+                            </div>
+                        </div>
+                        <div class="inventory-stat">
+                            <label>CARGA MÁX.</label>
+                            <div class="inventory-boxes">
+                                <div class="inventory-box"><input type="number" value="0"></div>
+                                <div class="inventory-box"><input type="number" value="0"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="action-bar">
+                        <button class="action-purple-btn" onclick="addItem()">Novo Item</button>
+                    </div>
+                    <div id="inventory-container">
+                        <div class="empty-placeholder" id="empty-inventory-msg">Seu inventário está vazio</div>
+                    </div>
+                </div>
+
+                <!-- ABA DESCRIÇÃO -->
+                <div class="tab-content" id="tab-descricao">
+                    <div class="description-fields">
+                        <div class="description-field"><label>ANOTAÇÕES</label><textarea></textarea></div>
+                        <div class="description-field"><label>APARÊNCIA</label><textarea></textarea></div>
+                        <div class="description-field"><label>PERSONALIDADE</label><textarea></textarea></div>
+                        <div class="description-field"><label>HISTÓRICO</label><textarea></textarea></div>
+                        <div class="description-field"><label>OBJETIVO</label><textarea></textarea></div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="history-panel" id="history-panel">
+    <div class="history-header">
+        <h3>Histórico de rolagens</h3>
+        <button class="history-clear-btn" type="button" onclick="clearHistory()">Limpar</button>
+    </div>
+    <div class="history-list" id="history-list">
+        <div class="history-empty" id="history-empty">Nenhuma rolagem realizada</div>
+    </div>
+</div>
+
+<!-- MODAIS DE CADASTRO -->
+<div class="modal" id="attack-modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3 id="attack-modal-title">Novo Ataque</h3><button class="close-btn" onclick="closeModal('attack-modal')">✕</button></div>
+        <div class="modal-field"><label>Nome</label><input id="attack-name" type="text"></div>
+        <div class="modal-grid">
+            <div class="modal-field"><label>Dano</label><input id="attack-damage" type="text" value="0"></div>
+            <div class="modal-field"><label>Crítico</label><input id="attack-critical" type="text" value="0"></div>
+            <div class="modal-field"><label>Multiplicador</label><input id="attack-multiplier" type="text" value="0"></div>
+        </div>
+        <div class="modal-grid">
+            <div class="modal-field"><label>Ataque Bônus</label><input id="attack-bonus" type="text" value="0"></div>
+            <div class="modal-field"><label>Tipo de Dano</label>
+                <div class="damage-type-container" id="damage-type-container">
+                    <div class="damage-type-display" id="damage-type-display" onclick="toggleDamageTypeMenu(event)">Selecionar</div>
+                    <div class="damage-type-menu">
+                        <div class="damage-type-option" onclick="selectDamageType('Balístico')">Balístico</div>
+                        <div class="damage-type-option" onclick="selectDamageType('Corte')">Corte</div>
+                        <div class="damage-type-option" onclick="selectDamageType('Impacto')">Impacto</div>
+                        <div class="damage-type-option" onclick="selectDamageType('Químico')">Químico</div>
+                        <div class="damage-type-option" onclick="selectDamageType('Frio')">Frio</div>
+                        <div class="damage-type-option" onclick="selectDamageType('Calor')">Calor</div>
+                        <div class="damage-type-option" onclick="selectDamageType('Mental')">Mental</div>
+                    </div>
+                    <input type="hidden" id="attack-type" value="">
+                </div>
+            </div>
+        </div>
+        <div class="modal-grid">
+            <div class="modal-field"><label>Alcance</label>
+                <div class="attack-selector-container" id="attack-range-container">
+                    <div class="attack-selector-display" id="attack-range-display" onclick="toggleAttackSelector(event, 'attack-range')">Selecionar</div>
+                    <div class="attack-selector-menu" id="attack-range-menu"></div>
+                    <input type="hidden" id="attack-range" value="">
+                </div>
+            </div>
+            <div class="modal-field"><label>Perícia</label>
+                <div class="attack-selector-container" id="attack-skill-container">
+                    <div class="attack-selector-display" id="attack-skill-display" onclick="toggleAttackSelector(event, 'attack-skill')">Selecionar</div>
+                    <div class="attack-selector-menu" id="attack-skill-menu"></div>
+                    <input type="hidden" id="attack-skill" value="">
+                </div>
+            </div>
+            <div class="modal-field"><label>Atributo Dano</label>
+                <div class="attack-selector-container" id="attack-attribute-container">
+                    <div class="attack-selector-display" id="attack-attribute-display" onclick="toggleAttackSelector(event, 'attack-attribute')">Selecionar</div>
+                    <div class="attack-selector-menu" id="attack-attribute-menu"></div>
+                    <input type="hidden" id="attack-attribute" value="">
+                </div>
+            </div>
+        </div>
+        <div class="modal-field"><label>Anotações</label><textarea id="attack-notes"></textarea></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="closeModal('attack-modal')">Cancelar</button><button class="action-purple-btn" id="attack-save-btn" onclick="saveAttack()">Adicionar</button></div>
+    </div>
+</div>
+
+<div class="modal" id="ability-modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3 id="ability-modal-title">Nova Habilidade</h3><button class="close-btn" onclick="closeModal('ability-modal')">✕</button></div>
+        <div class="modal-field"><label>Nome</label><input id="ability-name" type="text"></div>
+        <div class="modal-field"><label>Descrição</label><textarea id="ability-description"></textarea></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="closeModal('ability-modal')">Cancelar</button><button class="action-purple-btn" id="ability-save-btn" onclick="saveAbility()">Adicionar</button></div>
+    </div>
+</div>
+
+<!-- POP-UP RESULTADO DE DADOS -->
+<div class="dice-result-modal" id="dice-modal">
+    <div class="dice-title">
+        <span id="modal-title">ROLAGEM</span>
+        <span style="cursor:pointer" onclick="closeModal()">✕</span>
+    </div>
+    <div class="dice-details" id="modal-details">D20 + Bônus</div>
+    <div class="dice-total">TOTAL: <span id="modal-total">0</span></div>
+</div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
