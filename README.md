@@ -13,7 +13,9 @@ Abra `http://localhost:3000`. O login e o salvamento de fichas dependem do servi
 
 O workflow em `.github/workflows/deploy-pages.yml` publica automaticamente o frontend a cada push na branch `main`. No repositório, ative `Settings > Pages > Source: GitHub Actions`.
 
-O GitHub Pages hospeda apenas arquivos estáticos. Para login, contas e fichas salvas, publique `server.js` em um serviço Node. O arquivo `render.yaml` deixa essa publicação pronta no Render, incluindo armazenamento persistente para o SQLite. Configure `ADMIN_USERNAME` e `ADMIN_PASSWORD` como variáveis secretas no serviço.
+O GitHub Pages hospeda apenas arquivos estáticos. Para login, contas e fichas salvas, publique `server.js` em um serviço Node. O arquivo `render.yaml` deixa essa publicação pronta no Render no plano Free. Configure `ADMIN_USERNAME` e `ADMIN_PASSWORD` como variáveis secretas no serviço.
+
+No plano Free, o armazenamento local do SQLite não é permanente e pode ser apagado após reinícios ou novos deploys. Para manter as contas definitivamente, será necessário um banco externo ou um disco persistente pago.
 
 Use o [deploy direto no Render](https://render.com/deploy?repo=https://github.com/MurilloG9/FICHA-ONLINE) para criar a API a partir deste repositório.
 
