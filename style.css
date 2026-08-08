@@ -102,6 +102,109 @@
             white-space: nowrap;
         }
 
+        .admin-users-action {
+            position: absolute;
+            top: 12px;
+            right: 214px;
+        }
+
+        .admin-content {
+            width: min(860px, calc(100vw - 32px));
+            max-height: calc(100vh - 48px);
+            overflow-y: auto;
+        }
+
+        .admin-user-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .admin-user-row {
+            display: grid;
+            grid-template-columns: minmax(140px, 1fr) minmax(180px, 1.4fr) 90px auto;
+            align-items: center;
+            gap: 10px;
+            background: #181818;
+            border: 1px solid #383838;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .admin-user-main {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .admin-user-main strong,
+        .admin-user-main small {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .admin-user-main small {
+            color: #888;
+            font-size: 11px;
+        }
+
+        .admin-user-email {
+            background: #101010;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #eee;
+            min-width: 0;
+            padding: 8px;
+        }
+
+        .admin-password-mask {
+            color: #888;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .admin-user-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 5px;
+        }
+
+        .admin-user-actions button {
+            background: #222;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #ddd;
+            cursor: pointer;
+            font-size: 11px;
+            padding: 6px 8px;
+        }
+
+        .admin-user-actions button:hover {
+            border-color: var(--green-text);
+            color: #fff;
+        }
+
+        .admin-user-actions .admin-delete-btn:hover {
+            border-color: #ff6b6b;
+        }
+
+        @media (max-width: 760px) {
+            .admin-users-action {
+                right: 12px;
+                top: 54px;
+            }
+
+            .admin-user-row {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-user-actions {
+                justify-content: flex-start;
+            }
+        }
+
         .auth-content,
         .save-content {
             width: min(420px, calc(100vw - 32px));

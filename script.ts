@@ -713,11 +713,65 @@ interface Element {
         updateAuthButton();
     }
 
-    function updateAuthButton(user?: { username?: string; email?: string }) {
+    function updateAuthButton(user?: { username?: string; email?: string; role?: string }) {
         const button = document.getElementById('login-btn');
+        const adminButton = document.getElementById('admin-users-btn');
         if (!button) return;
         button.innerText = user?.username || user?.email?.split('@')[0] || (authToken ? 'Conta' : 'Login');
         button.title = authToken ? 'Sair da conta' : 'Entrar';
+        if (adminButton) adminButton.hidden = user?.role !== 'admin';
+    }
+
+    function escapeAdminText(value) {
+        return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[character]);
+    }
+
+    async function openAdminUsers() {
+        const modal = document.getElementById('admin-modal');
+        if (!authToken || !modal) return;
+        modal.style.display = 'flex';
+        await loadAdminUsers();
+    }
+
+    async function loadAdminUsers() {
+        const list = document.getElementById('admin-user-list');
+        const feedback = document.getElementById('admin-feedback');
+        list.innerHTML = '<p class="history-empty">Carregando usuários...</p>';
+        feedback.innerText = '';
+        const response = await fetch('/api/admin/users', { headers: { Authorization: `Bearer ${authToken}` } });
+        const result = await response.json();
+        if (!response.ok) { feedback.innerText = result.error || 'Não foi possível carregar os usuários.'; return; }
+        list.innerHTML = result.users.map(user => `
+            <div class="admin-user-row">
+                <div class="admin-user-main"><strong>${escapeAdminText(user.username || 'Conta comum')}</strong><small>${escapeAdminText(user.createdAt ? new Date(user.createdAt).toLocaleString('pt-BR') : '')} | ${escapeAdminText(user.role)}</small></div>
+                <input class="admin-user-email" id="admin-email-${escapeAdminText(user.id)}" type="email" value="${escapeAdminText(user.email)}" aria-label="E-mail do usuário">
+                <span class="admin-password-mask">${user.passwordMasked}</span>
+                <div class="admin-user-actions"><button type="button" onclick="saveAdminUser('${escapeAdminText(user.id)}')">Salvar e-mail</button><button type="button" onclick="resetAdminPassword('${escapeAdminText(user.id)}')">Nova senha</button>${user.role === 'admin' ? '' : `<button type="button" class="admin-delete-btn" onclick="deleteAdminUser('${escapeAdminText(user.id)}')">Excluir</button>`}</div>
+            </div>`).join('') || '<p class="history-empty">Nenhum usuário cadastrado.</p>';
+    }
+
+    async function saveAdminUser(userId) {
+        const email = document.getElementById(`admin-email-${userId}`).value;
+        const response = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ email }) });
+        const result = await response.json();
+        document.getElementById('admin-feedback').innerText = response.ok ? 'E-mail atualizado.' : (result.error || 'Não foi possível atualizar.');
+        if (response.ok) await loadAdminUsers();
+    }
+
+    async function resetAdminPassword(userId) {
+        const password = prompt('Digite a nova senha (mínimo de 6 caracteres):');
+        if (password === null) return;
+        const response = await fetch(`/api/admin/users/${encodeURIComponent(userId)}/password`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ password }) });
+        const result = await response.json();
+        document.getElementById('admin-feedback').innerText = response.ok ? 'Senha redefinida. A senha anterior não pode ser recuperada.' : (result.error || 'Não foi possível redefinir a senha.');
+    }
+
+    async function deleteAdminUser(userId) {
+        if (!confirm('Excluir esta conta e a ficha salva associada?')) return;
+        const response = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
+        const result = await response.json();
+        document.getElementById('admin-feedback').innerText = response.ok ? 'Usuário excluído.' : (result.error || 'Não foi possível excluir o usuário.');
+        if (response.ok) await loadAdminUsers();
     }
 
     function openSaveOptions() {

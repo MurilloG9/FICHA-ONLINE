@@ -128,7 +128,7 @@ async function handleApi(request, response, url) {
         if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 6) {
             return sendJson(response, 400, { error: 'Informe um e-mail válido e uma senha com pelo menos 6 caracteres.' });
         }
-        const existingUser = database.prepare('SELECT id, email, password_salt AS passwordSalt, password_hash AS passwordHash FROM users WHERE email = ?').get(email);
+        const existingUser = database.prepare('SELECT id, email, username, role, password_salt AS passwordSalt, password_hash AS passwordHash FROM users WHERE email = ?').get(email);
         if (url.pathname === '/api/register' && existingUser) {
             return sendJson(response, 409, { error: 'Este e-mail já está cadastrado.' });
         }
@@ -137,7 +137,7 @@ async function handleApi(request, response, url) {
             if (!user || !passwordsMatch(password, user)) return sendJson(response, 401, { error: 'E-mail ou senha incorretos.' });
         } else {
             const passwordData = hashPassword(password);
-            user = { id: crypto.randomUUID(), email, passwordSalt: passwordData.salt, passwordHash: passwordData.hash, createdAt: new Date().toISOString() };
+            user = { id: crypto.randomUUID(), email, username: null, role: 'user', passwordSalt: passwordData.salt, passwordHash: passwordData.hash, createdAt: new Date().toISOString() };
             database.prepare('INSERT INTO users (id, email, password_salt, password_hash, created_at) VALUES (?, ?, ?, ?, ?)').run(user.id, user.email, user.passwordSalt, user.passwordHash, user.createdAt);
         }
         const token = crypto.randomBytes(32).toString('hex');
@@ -153,6 +153,44 @@ async function handleApi(request, response, url) {
     if (!user) return sendJson(response, 401, { error: 'Faça login para continuar.' });
     if (request.method === 'GET' && url.pathname === '/api/me') {
         return sendJson(response, 200, { user: { id: user.id, username: user.username, email: user.email, role: user.role } });
+    }
+    if (url.pathname.startsWith('/api/admin/')) {
+        if (user.role !== 'admin') return sendJson(response, 403, { error: 'Acesso restrito ao administrador.' });
+        if (request.method === 'GET' && url.pathname === '/api/admin/users') {
+            const users = database.prepare(`SELECT id, email, username, role, created_at AS createdAt
+                FROM users ORDER BY created_at DESC`).all();
+            return sendJson(response, 200, { users: users.map(item => ({ ...item, passwordMasked: '********' })) });
+        }
+        const userMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)(?:\/(password))?$/);
+        if (!userMatch) return sendJson(response, 404, { error: 'Rota administrativa não encontrada.' });
+        const targetId = decodeURIComponent(userMatch[1]);
+        const target = database.prepare('SELECT id, email, username, role FROM users WHERE id = ?').get(targetId);
+        if (!target) return sendJson(response, 404, { error: 'Usuário não encontrado.' });
+        if (request.method === 'PATCH' && !userMatch[2]) {
+            const body = await getRequestBody(request);
+            const email = String(body.email || '').trim().toLowerCase();
+            if (!/^\S+@\S+\.\S+$/.test(email)) return sendJson(response, 400, { error: 'Informe um e-mail válido.' });
+            const duplicate = database.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, targetId);
+            if (duplicate) return sendJson(response, 409, { error: 'Este e-mail já está em uso.' });
+            database.prepare('UPDATE users SET email = ? WHERE id = ?').run(email, targetId);
+            return sendJson(response, 200, { ok: true });
+        }
+        if (request.method === 'POST' && userMatch[2] === 'password') {
+            const body = await getRequestBody(request);
+            const password = String(body.password || '');
+            if (password.length < 6) return sendJson(response, 400, { error: 'A nova senha precisa ter pelo menos 6 caracteres.' });
+            const passwordData = hashPassword(password);
+            database.prepare('UPDATE users SET password_salt = ?, password_hash = ? WHERE id = ?').run(passwordData.salt, passwordData.hash, targetId);
+            for (const [token, sessionUserId] of sessions) if (sessionUserId === targetId) sessions.delete(token);
+            return sendJson(response, 200, { ok: true });
+        }
+        if (request.method === 'DELETE') {
+            if (targetId === user.id || target.role === 'admin') return sendJson(response, 400, { error: 'A conta administrativa não pode ser excluída.' });
+            database.prepare('DELETE FROM users WHERE id = ?').run(targetId);
+            for (const [token, sessionUserId] of sessions) if (sessionUserId === targetId) sessions.delete(token);
+            return sendJson(response, 200, { ok: true });
+        }
+        return sendJson(response, 405, { error: 'Método não permitido.' });
     }
     if (request.method === 'GET' && url.pathname === '/api/sheets/current') {
         const sheet = database.prepare('SELECT content, updated_at AS updatedAt FROM sheets WHERE user_id = ?').get(user.id);

@@ -24,6 +24,7 @@
             </svg>
         </button>
         <button class="file-action-btn login-action" id="login-btn" type="button" onclick="openAuthModal()">Login</button>
+        <button class="file-action-btn admin-users-action" id="admin-users-btn" type="button" onclick="openAdminUsers()" hidden>Usuários</button>
         <div class="settings-panel" id="settings-panel">
             <label class="settings-option" for="sound-mute-toggle">
                 <span>Mutar sons</span>
@@ -514,6 +515,15 @@
         <p class="save-description">Escolha onde guardar a ficha atual.</p>
         <div class="save-options"><button type="button" class="save-option" onclick="saveSheetToAccount()"><strong>Salvar na conta</strong><span>Sincroniza com seu login</span></button><button type="button" class="save-option" onclick="closeModal('save-modal'); downloadSheet()"><strong>Exportar .txt</strong><span>Salva uma cópia no dispositivo</span></button></div>
         <p class="auth-feedback" id="save-feedback" role="status"></p>
+    </div>
+</div>
+
+<div class="admin-modal modal" id="admin-modal">
+    <div class="modal-content admin-content">
+        <div class="modal-header"><h3>Usuários cadastrados</h3><button class="close-btn" type="button" onclick="closeModal('admin-modal')">✕</button></div>
+        <p class="save-description">Senhas são armazenadas como hash e não podem ser reveladas. Use “Nova senha” para redefinir uma senha.</p>
+        <div class="admin-feedback auth-feedback" id="admin-feedback" role="status"></div>
+        <div class="admin-user-list" id="admin-user-list"><p class="history-empty">Carregando usuários...</p></div>
     </div>
 </div>
 
