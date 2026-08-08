@@ -159,7 +159,7 @@ interface Element {
 
         const intellectInput = document.getElementById('attr-int');
         const previousIntellectBonus = parseInt(intellectInput.dataset.classBonus) || 0;
-        const baseIntellect = Math.max(0, parseInt(intellectInput.value) - previousIntellectBonus);
+        const baseIntellect = Math.max(0, (parseInt(intellectInput.value) || 0) - previousIntellectBonus);
         const intellectBonus = benefit.intellect || 0;
         intellectInput.dataset.classBonus = String(intellectBonus);
         intellectInput.value = String(Math.min(5, baseIntellect + intellectBonus));
