@@ -41,17 +41,20 @@ const classEvolutions = {
 };
 const classBenefits = {
     Fortalecedor: {
-        hp: 5, san: 1, ea: 2, intellect: 1,
+        hp: 5, san: 1, ea: 2,
+        freeChoices: 3,
         fixed: [],
         groups: [['Luta', 'Furtividade'], ['Fortitude', 'Reflexos']]
     },
     Preciso: {
-        hp: 3, san: 3, ea: 2, intellect: 1,
+        hp: 3, san: 3, ea: 2,
+        freeChoices: 3,
         fixed: ['Pontaria'],
         groups: [['Reflexos', 'Percepção'], skillsData.map(skill => skill.name)]
     },
     Fluido: {
-        hp: 2, san: 3, ea: 3, intellect: 1,
+        hp: 2, san: 3, ea: 3,
+        freeChoices: 3,
         fixed: ['Ocultismo'],
         groups: [['Ciências', 'Religião'], skillsData.map(skill => skill.name)]
     }
@@ -63,7 +66,7 @@ function getPrimaryClass() {
     return Object.keys(classBenefits).includes(select.dataset.primary) ? select.dataset.primary : select.value;
 }
 function getClassBenefit(primary = getPrimaryClass()) {
-    return classBenefits[primary] || { hp: 0, san: 0, ea: 0, intellect: 0, fixed: [], groups: [] };
+    return classBenefits[primary] || { hp: 0, san: 0, ea: 0, freeChoices: 0, fixed: [], groups: [] };
 }
 function getClassChoice(id, fallback = '') {
     return document.getElementById(id)?.value || fallback;
@@ -82,10 +85,12 @@ function renderClassBenefitsPanel(primary) {
     }
     const selectOptions = (values, selected) => values.map(skill => `<option value="${skill}" ${skill === selected ? 'selected' : ''}>${skill} +2</option>`).join('');
     const savedChoices = benefit.groups.map((_, index) => getClassChoice(`class-choice-${index}`));
-    const savedFree = Array.from({ length: 3 }, (_, index) => getClassChoice(`class-free-${index}`));
+    const intellect = parseInt(document.getElementById('attr-int').value) || 0;
+    const freeChoiceCount = benefit.freeChoices + intellect;
+    const savedFree = Array.from({ length: freeChoiceCount }, (_, index) => getClassChoice(`class-free-${index}`));
     panel.innerHTML = `
             <div class="class-benefits-title">Benefícios de ${primary}</div>
-            <div class="class-benefits-summary">Vida +${benefit.hp} | Sanidade +${benefit.san} | EA +${benefit.ea} | INT +${benefit.intellect}</div>
+            <div class="class-benefits-summary">Vida +${benefit.hp} | Sanidade +${benefit.san} | EA +${benefit.ea} | ${freeChoiceCount} perícias livres</div>
             ${benefit.fixed.length ? `<div class="class-benefits-fixed">Perícia garantida: ${benefit.fixed.map(skill => `${skill} +2`).join(', ')}</div>` : ''}
             ${benefit.groups.map((group, index) => `
                 <label class="class-benefit-choice">Escolha uma perícia +2:
@@ -95,7 +100,7 @@ function renderClassBenefitsPanel(primary) {
                     </select>
                 </label>
             `).join('')}
-            ${[0, 1, 2].map(index => `
+            ${Array.from({ length: freeChoiceCount }, (_, index) => index).map(index => `
                 <label class="class-benefit-choice">Perícia livre ${index + 1} +2:
                     <select id="class-free-${index}" onchange="applyClassBenefits()">
                         <option value="">Selecionar</option>
@@ -115,7 +120,9 @@ function applyClassBenefits() {
         if (selected)
             classBonusBySkill[selected] = (classBonusBySkill[selected] || 0) + 2;
     });
-    [0, 1, 2].forEach(index => {
+    const intellect = parseInt(document.getElementById('attr-int').value) || 0;
+    const freeChoiceCount = benefit.freeChoices + intellect;
+    Array.from({ length: freeChoiceCount }, (_, index) => index).forEach(index => {
         const selected = getClassChoice(`class-free-${index}`);
         if (selected)
             classBonusBySkill[selected] = (classBonusBySkill[selected] || 0) + 2;
@@ -125,12 +132,6 @@ function applyClassBenefits() {
         input.dataset.classBonus = String(classBonusBySkill[skill.name] || 0);
         updateSkill(index);
     });
-    const intellectInput = document.getElementById('attr-int');
-    const previousIntellectBonus = parseInt(intellectInput.dataset.classBonus) || 0;
-    const baseIntellect = Math.max(0, (parseInt(intellectInput.value) || 0) - previousIntellectBonus);
-    const intellectBonus = benefit.intellect || 0;
-    intellectInput.dataset.classBonus = String(intellectBonus);
-    intellectInput.value = String(Math.min(5, baseIntellect + intellectBonus));
     calculateSheet(true);
 }
 function updateClassSelection() {
@@ -444,6 +445,7 @@ function calculateSheet(refillVitals = false) {
     const presence = parseInt(document.getElementById('attr-pre').value) || 0;
     const level = parseInt(document.getElementById('char-level').value) || 0;
     updateClassEvolutionOptions();
+    renderClassMenu(false);
     const classBenefit = getClassBenefit();
     const hpOther = parseInt(document.getElementById('hp-other').value) || 0;
     const sanOther = parseInt(document.getElementById('san-other').value) || 0;
