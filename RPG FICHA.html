@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ficha RPG - Viewpoint</title>
-        <link rel="stylesheet" href="style.css?v=site-tabs-1">
+        <link rel="stylesheet" href="style.css?v=shared-header-1">
 </head>
 <body>
 
 <section class="characters-view" id="characters-view">
-    <header class="characters-header">
+    <header class="characters-header site-header">
         <div>
             <div class="brand-section characters-brand">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -38,10 +38,15 @@
 
 <div class="sheet-container" id="sheet-editor" hidden>
 
-    <div class="header-title-box">
+    <div class="header-title-box site-header">
         <div class="file-actions">
             <button class="file-action-btn" type="button" onclick="showCharactersView()">Personagens</button>
         </div>
+        <nav class="site-tabs editor-site-tabs" aria-label="Seções do site">
+            <button class="site-tab active" type="button" data-section="characters" onclick="showCharactersView()">Personagens</button>
+            <button class="site-tab" type="button" data-section="campaigns" onclick="selectSiteSection('campaigns')">Campanhas</button>
+            <button class="site-tab" type="button" data-section="enemies" onclick="selectSiteSection('enemies')">Inimigos</button>
+        </nav>
         <button class="file-action-btn settings-action" type="button" onclick="toggleSettings(event)" title="Configurações" aria-label="Configurações">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="3"></circle>
@@ -567,7 +572,7 @@
 </div>
 
     <script>window.API_BASE_URL = 'https://ficha-online-api.onrender.com';</script>
-    <script src="script.js?v=site-tabs-1"></script>
+    <script src="script.js?v=shared-header-1"></script>
 
 </body>
 </html>

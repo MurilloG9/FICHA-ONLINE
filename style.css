@@ -51,6 +51,67 @@
             margin-bottom: 28px;
         }
 
+        .site-header {
+            min-height: 72px;
+            border: 1px solid #292929;
+            border-radius: 6px;
+            background: #111;
+            box-shadow: 0 5px 18px rgba(0, 0, 0, .24);
+        }
+
+        .site-header .characters-brand,
+        .site-header .brand-section {
+            position: absolute;
+            top: 16px;
+            left: 18px;
+            margin: 0;
+        }
+
+        .site-header .site-tabs {
+            position: absolute;
+            top: 17px;
+            left: 360px;
+            margin: 0;
+        }
+
+        .site-header .characters-header-actions {
+            position: static;
+        }
+
+        .site-header .home-login-action,
+        .site-header .login-action {
+            top: 18px;
+            right: 18px;
+        }
+
+        .site-header .open-sheet-home-btn {
+            top: 18px;
+            right: 250px;
+        }
+
+        .site-header .new-character-btn {
+            top: 18px;
+            right: 130px;
+        }
+
+        .editor-site-tabs {
+            display: flex;
+        }
+
+        .characters-header h1 {
+            display: none;
+        }
+
+        .characters-header > div:first-child > p {
+            position: absolute;
+            top: 84px;
+            left: 0;
+        }
+
+        .characters-grid {
+            margin-top: 54px;
+        }
+
         .characters-eyebrow {
             color: #a855f7;
             font-size: 12px;
@@ -896,8 +957,8 @@
 
             .home-login-action {
                 top: 28px;
-                left: 0;
-                right: auto;
+                left: auto;
+                right: 18px;
             }
 
             .characters-grid {
