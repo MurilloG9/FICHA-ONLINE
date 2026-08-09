@@ -687,24 +687,138 @@ function selectSiteSection(section) {
     if (charactersGrid) charactersGrid.innerHTML = '<div class="characters-empty"><strong>Em breve</strong><span>Esta seção está pronta para receber seus registros.</span></div>';
 }
 let campaignModalMode = 'create';
-function openCampaignCreator() { campaignModalMode = 'create'; document.getElementById('campaign-modal-title').innerText = 'Criar campanha'; document.getElementById('campaign-modal-label').innerText = 'Nome da campanha'; document.getElementById('campaign-modal-input').value = ''; document.getElementById('campaign-modal').style.display = 'flex'; }
-function openJoinCampaign() { campaignModalMode = 'join'; document.getElementById('campaign-modal-title').innerText = 'Entrar em campanha'; document.getElementById('campaign-modal-label').innerText = 'Código da campanha'; document.getElementById('campaign-modal-input').value = ''; document.getElementById('campaign-modal').style.display = 'flex'; }
-async function submitCampaignModal() { const value = document.getElementById('campaign-modal-input').value.trim(); if (!value) return; const path = campaignModalMode === 'create' ? '/api/campaigns' : '/api/campaigns/join'; const body = campaignModalMode === 'create' ? { name: value } : { inviteCode: value }; const response = await fetch(apiUrl(path), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify(body) }); const result = await response.json(); if (!response.ok) return alert(result.error || 'Não foi possível concluir.'); closeModal('campaign-modal'); selectSiteSection('campaigns'); }
-async function loadCampaigns() { const grid = document.getElementById('campaigns-grid'); if (!grid) return; const response = await fetch(apiUrl('/api/campaigns'), { headers: { Authorization: `Bearer ${authToken}` } }); const result = await response.json(); if (!response.ok) return grid.innerHTML = `<div class="characters-empty"><strong>${escapeAdminText(result.error)}</strong></div>`; grid.innerHTML = result.campaigns.map(c => `
-        <article class="campaign-card">
-            <div class="campaign-icon" aria-hidden="true">⚔</div>
-            <div class="campaign-card-content">
-                <h2>${escapeAdminText(c.name)}</h2>
-                <p>${c.memberCount} jogador${c.memberCount === 1 ? '' : 'es'}</p>
-                <small>Código: ${escapeAdminText(c.inviteCode)}</small>
+function openCampaignCreator() {
+    campaignModalMode = 'create';
+    document.getElementById('campaign-modal-title').innerText = 'Criar campanha';
+    document.getElementById('campaign-modal-label').innerText = 'Nome da campanha';
+    document.getElementById('campaign-modal-input').value = '';
+    document.getElementById('campaign-modal').style.display = 'flex';
+}
+function openJoinCampaign() {
+    campaignModalMode = 'join';
+    document.getElementById('campaign-modal-title').innerText = 'Entrar em campanha';
+    document.getElementById('campaign-modal-label').innerText = 'Código da campanha';
+    document.getElementById('campaign-modal-input').value = '';
+    document.getElementById('campaign-modal').style.display = 'flex';
+}
+function renderCampaignsEmptyState(message) {
+    const grid = document.getElementById('campaigns-grid');
+    if (!grid) return;
+    grid.innerHTML = `<div class="characters-empty"><strong>${escapeAdminText(message)}</strong><span>Crie uma campanha ou entre com um código para começar.</span></div>`;
+}
+async function submitCampaignModal() {
+    if (!authToken) return alert('Entre na conta antes de criar ou entrar em campanhas.');
+    const value = document.getElementById('campaign-modal-input').value.trim();
+    if (!value) return;
+    const path = campaignModalMode === 'create' ? '/api/campaigns' : '/api/campaigns/join';
+    const body = campaignModalMode === 'create' ? { name: value } : { inviteCode: value };
+    const response = await fetch(apiUrl(path), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify(body)
+    });
+    const result = await response.json();
+    if (!response.ok) return alert(result.error || 'Não foi possível concluir.');
+    closeModal('campaign-modal');
+    selectSiteSection('campaigns');
+}
+async function loadCampaigns() {
+    const grid = document.getElementById('campaigns-grid');
+    if (!grid) return;
+    if (!authToken) {
+        renderCampaignsEmptyState('Faça login para ver suas campanhas');
+        return;
+    }
+    try {
+        const response = await fetch(apiUrl('/api/campaigns'), { headers: { Authorization: `Bearer ${authToken}` } });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Não foi possível carregar as campanhas.');
+        const campaigns = Array.isArray(result.campaigns) ? result.campaigns : [];
+        if (!campaigns.length) {
+            renderCampaignsEmptyState('Nenhuma campanha ainda');
+            return;
+        }
+        grid.innerHTML = campaigns.map(campaign => `
+            <article class="campaign-card">
+                <div class="campaign-icon" aria-hidden="true">⚔</div>
+                <div class="campaign-card-content">
+                    <h2>${escapeAdminText(campaign.name)}</h2>
+                    <p>${campaign.memberCount} jogador${campaign.memberCount === 1 ? '' : 'es'}</p>
+                    <small>Código: ${escapeAdminText(campaign.inviteCode)}</small>
+                </div>
+                <button type="button" onclick="openCampaign('${campaign.id}')">Abrir</button>
+            </article>
+        `).join('');
+    } catch (error) {
+        renderCampaignsEmptyState(error.message || 'Não foi possível carregar as campanhas');
+    }
+}
+async function openCampaign(id) {
+    const response = await fetch(apiUrl(`/api/campaigns/${encodeURIComponent(id)}`), { headers: { Authorization: `Bearer ${authToken}` } });
+    const result = await response.json();
+    if (!response.ok) return alert(result.error || 'Não foi possível abrir a campanha.');
+    const detail = document.getElementById('campaign-detail');
+    const campaignsView = document.getElementById('campaigns-view');
+    if (campaignsView) campaignsView.hidden = true;
+    if (detail) {
+        detail.hidden = false;
+        detail.innerHTML = `
+            <div class="campaign-detail-header">
+                <button type="button" onclick="selectSiteSection('campaigns')">← Voltar</button>
+                <h1>${escapeAdminText(result.campaign.name)}</h1>
+                <div>
+                    <button type="button" onclick="addCharacterToCampaign('${id}')">Adicionar personagem</button>
+                    ${result.campaign.isOwner ? `<button type="button" onclick="inviteCampaign('${id}')">Convidar jogador</button>` : ''}
+                    <button type="button" onclick="leaveCampaign('${id}', ${result.campaign.isOwner})">${result.campaign.isOwner ? 'Excluir campanha' : 'Sair da campanha'}</button>
+                </div>
             </div>
-            <button type="button" onclick="openCampaign('${c.id}')">Abrir</button>
-        </article>
-    `).join('') || '<div class="characters-empty"><strong>Nenhuma campanha</strong><span>Crie uma campanha ou entre com um código.</span></div>'; }
-async function openCampaign(id) { const response = await fetch(apiUrl(`/api/campaigns/${encodeURIComponent(id)}`), { headers: { Authorization: `Bearer ${authToken}` } }); const result = await response.json(); if (!response.ok) return alert(result.error); document.getElementById('campaigns-view').hidden = true; const detail = document.getElementById('campaign-detail'); detail.hidden = false; detail.innerHTML = `<div class="campaign-detail-header"><button type="button" onclick="selectSiteSection('campaigns')">Campanhas</button><h1>${escapeAdminText(result.campaign.name)}</h1><div><button type="button" onclick="addCharacterToCampaign('${id}')">Adicionar personagem</button>${result.campaign.isOwner ? `<button type="button" onclick="inviteCampaign('${id}')">Convidar jogador</button><button type="button" class="master-shield-btn">Escudo do Mestre</button>` : ''}<button type="button" onclick="leaveCampaign('${id}', ${result.campaign.isOwner})">${result.campaign.isOwner ? 'Excluir campanha' : 'Sair da campanha'}</button></div></div><div class="campaign-tabs"><button class="site-tab active">Personagens</button><button class="site-tab">Jogadores</button></div><div class="campaign-members">${result.members.map(m => `<article class="campaign-member-card"><div class="campaign-member-avatar">${m.sheetName ? 'P' : '?'}</div><div class="campaign-member-content"><h2>${escapeAdminText(m.sheetName || 'Sem personagem')}</h2><p>${escapeAdminText(m.username || m.email)}</p><small>${m.userId === result.campaign.ownerId ? 'Mestre' : 'Jogador'} · ${escapeAdminText(m.username || m.email)}</small></div></article>`).join('')}</div>`; }
-async function addCharacterToCampaign(id) { const response = await fetch(apiUrl('/api/sheets'), { headers: { Authorization: `Bearer ${authToken}` } }); const result = await response.json(); if (!result.sheets?.length) return alert('Você ainda não possui personagens.'); const list = result.sheets.map((sheet, index) => `${index + 1}. ${sheet.characterName || sheet.name}`).join('\n'); const choice = Number(prompt(`Escolha o personagem para adicionar:\n${list}`)) - 1; const sheet = result.sheets[choice]; if (!sheet) return; const add = await fetch(apiUrl(`/api/campaigns/${id}/characters`), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ sheetId: sheet.id }) }); if (!add.ok) return alert((await add.json()).error); openCampaign(id); }
-async function inviteCampaign(id) { const response = await fetch(apiUrl(`/api/campaigns/${id}/invite`), { method: 'POST', headers: { Authorization: `Bearer ${authToken}` } }); const result = await response.json(); if (response.ok) prompt('Compartilhe este código:', result.inviteCode); }
-async function leaveCampaign(id, owner) { if (!confirm(owner ? 'Excluir esta campanha?' : 'Sair desta campanha?')) return; await fetch(apiUrl(`/api/campaigns/${id}/leave`), { method: 'POST', headers: { Authorization: `Bearer ${authToken}` } }); selectSiteSection('campaigns'); }
+            <div class="campaign-members">
+                ${result.members.map(member => `
+                    <article class="campaign-member-card">
+                        <div class="campaign-member-avatar">${member.sheetName ? 'P' : '?'}</div>
+                        <div class="campaign-member-content">
+                            <h2>${escapeAdminText(member.sheetName || 'Sem personagem')}</h2>
+                            <p>${escapeAdminText(member.username || member.email)}</p>
+                            <small>${member.userId === result.campaign.ownerId ? 'Mestre' : 'Jogador'}</small>
+                        </div>
+                    </article>
+                `).join('')}
+            </div>
+        `;
+    }
+}
+async function addCharacterToCampaign(id) {
+    const response = await fetch(apiUrl('/api/sheets'), { headers: { Authorization: `Bearer ${authToken}` } });
+    const result = await response.json();
+    if (!response.ok) return alert(result.error || 'Não foi possível carregar seus personagens.');
+    const sheets = Array.isArray(result.sheets) ? result.sheets : [];
+    if (!sheets.length) return alert('Você ainda não possui personagens para adicionar.');
+    const list = sheets.map((sheet, index) => `${index + 1}. ${sheet.characterName || sheet.name}`).join('\n');
+    const choice = Number(prompt(`Escolha o personagem para adicionar:\n${list}`)) - 1;
+    const sheet = sheets[choice];
+    if (!sheet) return;
+    const add = await fetch(apiUrl(`/api/campaigns/${id}/characters`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ sheetId: sheet.id })
+    });
+    const payload = await add.json();
+    if (!add.ok) return alert(payload.error || 'Não foi possível associar o personagem.');
+    openCampaign(id);
+}
+async function inviteCampaign(id) {
+    const response = await fetch(apiUrl(`/api/campaigns/${id}/invite`), { method: 'POST', headers: { Authorization: `Bearer ${authToken}` } });
+    const result = await response.json();
+    if (!response.ok) return alert(result.error || 'Não foi possível gerar o código.');
+    prompt('Compartilhe este código de convite:', result.inviteCode);
+}
+async function leaveCampaign(id, owner) {
+    if (!confirm(owner ? 'Excluir esta campanha?' : 'Sair desta campanha?')) return;
+    const response = await fetch(apiUrl(`/api/campaigns/${id}/leave`), { method: 'POST', headers: { Authorization: `Bearer ${authToken}` } });
+    const result = await response.json();
+    if (!response.ok) return alert(result.error || 'Não foi possível concluir.');
+    selectSiteSection('campaigns');
+}
 function showSheetEditor() {
     document.body.classList.add('sheet-open');
     document.getElementById('characters-view').hidden = true;
