@@ -1079,6 +1079,73 @@
             color: #fff;
             cursor: pointer;
             box-shadow: 0 6px 20px rgba(0, 0, 0, .45);
+            display: none;
+        }
+
+        body.sheet-open .history-float-btn { display: grid; }
+
+        .campaigns-view,
+        .campaign-detail { margin-top: 18px; }
+
+        .campaigns-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .campaign-card {
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 18px;
+            border: 1px solid #292929;
+            border-radius: 5px;
+            background: linear-gradient(145deg, #241536, #161616 65%);
+        }
+
+        .campaign-card h2 { color: #fff; font-size: 22px; }
+        .campaign-card small { color: #aaa; }
+        .campaign-card button,
+        .campaign-detail-header button { align-self: flex-end; border: 1px solid #a855f7; padding: 8px 12px; background: #a855f7; color: #fff; cursor: pointer; font-weight: 700; }
+
+        .campaign-detail-header { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 20px; }
+        .campaign-detail-header h1 { margin-right: auto; color: #fff; font-size: 28px; }
+        .campaign-detail-header div { display: flex; gap: 8px; flex-wrap: wrap; }
+        .campaign-detail-header > button { background: #222; }
+        .campaign-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+        .campaign-members { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+        .campaign-member-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px;
+            border: 1px solid #2d2d2d;
+            border-radius: 14px;
+            background: linear-gradient(145deg, #111111, #1b1b1b);
+            color: #fff;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .campaign-member-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, #a855f7, #4c1d95);
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .campaign-member-content h2 { margin: 0 0 4px; color: #fff; font-size: 18px; }
+        .campaign-member-content p { margin: 0 0 4px; color: #d4d4d8; font-size: 14px; }
+        .campaign-member-content small { color: #9ca3af; }
+
+        @media (max-width: 700px) {
+            .campaign-members { grid-template-columns: 1fr; }
+            .campaign-detail-header h1 { width: 100%; }
         }
 
         .history-float-btn:hover {

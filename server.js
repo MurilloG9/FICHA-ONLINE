@@ -53,6 +53,20 @@ database.exec(`
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS campaigns (
+        id TEXT PRIMARY KEY,
+        owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        invite_code TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS campaign_members (
+        campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        sheet_id TEXT REFERENCES saved_sheets(id) ON DELETE SET NULL,
+        joined_at TEXT NOT NULL,
+        PRIMARY KEY (campaign_id, user_id)
+    );
 `);
 const userColumns = database.prepare('PRAGMA table_info(users)').all().map(column => column.name);
 if (!userColumns.includes('username')) database.exec('ALTER TABLE users ADD COLUMN username TEXT');
@@ -121,6 +135,13 @@ function removeUserSessions(userId) {
     database.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
 }
 
+function createInviteCode() {
+    let code;
+    do code = crypto.randomBytes(4).toString('hex').toUpperCase();
+    while (database.prepare('SELECT id FROM campaigns WHERE invite_code = ?').get(code));
+    return code;
+}
+
 function allowApiOrigin(response) {
     response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -132,8 +153,12 @@ function getRequestBody(request) {
         let body = '';
         request.on('data', chunk => body += chunk);
         request.on('end', () => {
-            try { resolve(body ? JSON.parse(body) : {}); }
-            catch { reject(new Error('JSON inválido')); }
+            const trimmedBody = body.trim();
+            if (!trimmedBody) return resolve({});
+            try { resolve(JSON.parse(trimmedBody)); }
+            catch {
+                resolve({});
+            }
         });
         request.on('error', reject);
     });
@@ -153,6 +178,9 @@ async function handleApi(request, response, url) {
         const identifier = String(body.username || body.email || '').trim();
         const password = String(body.password || '');
         const isAdminLogin = url.pathname === '/api/login' && identifier === ADMIN_USERNAME;
+        const isEmailLike = identifier.includes('@');
+        const normalizedEmail = isEmailLike ? identifier.toLowerCase() : `${identifier.toLowerCase().replace(/\s+/g, '-')}@local.invalid`;
+        const username = isEmailLike ? null : identifier;
         if (isAdminLogin) {
             const admin = ADMIN_PASSWORD && database.prepare('SELECT id, email, username, role, password_salt AS passwordSalt, password_hash AS passwordHash FROM users WHERE username = ? AND role = \'admin\'').get(ADMIN_USERNAME);
             if (!admin || !passwordsMatch(password, admin)) return sendJson(response, 401, { error: 'Usuário ou senha incorretos.' });
@@ -160,21 +188,28 @@ async function handleApi(request, response, url) {
             saveSession(token, admin.id);
             return sendJson(response, 200, { token, user: { id: admin.id, username: admin.username, email: admin.email, role: admin.role } });
         }
-        const email = identifier.toLowerCase();
-        if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 6) {
+        if (!isEmailLike && !identifier) {
+            return sendJson(response, 400, { error: 'Informe um identificador válido e uma senha com pelo menos 6 caracteres.' });
+        }
+        if (!isEmailLike && !/^[^\s@]+$/.test(identifier)) {
+            return sendJson(response, 400, { error: 'Informe um nome de usuário válido sem espaços.' });
+        }
+        if (isEmailLike && !/^\S+@\S+\.\S+$/.test(normalizedEmail) || password.length < 6) {
             return sendJson(response, 400, { error: 'Informe um e-mail válido e uma senha com pelo menos 6 caracteres.' });
         }
-        const existingUser = database.prepare('SELECT id, email, username, role, password_salt AS passwordSalt, password_hash AS passwordHash FROM users WHERE email = ?').get(email);
+        const existingUser = isEmailLike
+            ? database.prepare('SELECT id, email, username, role, password_salt AS passwordSalt, password_hash AS passwordHash FROM users WHERE email = ?').get(normalizedEmail)
+            : database.prepare('SELECT id, email, username, role, password_salt AS passwordSalt, password_hash AS passwordHash FROM users WHERE username = ?').get(identifier);
         if (url.pathname === '/api/register' && existingUser) {
-            return sendJson(response, 409, { error: 'Este e-mail já está cadastrado.' });
+            return sendJson(response, 409, { error: isEmailLike ? 'Este e-mail já está cadastrado.' : 'Este nome de usuário já está em uso.' });
         }
         let user = existingUser;
         if (url.pathname === '/api/login') {
             if (!user || !passwordsMatch(password, user)) return sendJson(response, 401, { error: 'E-mail ou senha incorretos.' });
         } else {
             const passwordData = hashPassword(password);
-            user = { id: crypto.randomUUID(), email, username: null, role: 'user', passwordSalt: passwordData.salt, passwordHash: passwordData.hash, createdAt: new Date().toISOString() };
-            database.prepare('INSERT INTO users (id, email, password_salt, password_hash, created_at) VALUES (?, ?, ?, ?, ?)').run(user.id, user.email, user.passwordSalt, user.passwordHash, user.createdAt);
+            user = { id: crypto.randomUUID(), email: normalizedEmail, username, role: 'user', passwordSalt: passwordData.salt, passwordHash: passwordData.hash, createdAt: new Date().toISOString() };
+            database.prepare('INSERT INTO users (id, email, username, password_salt, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(user.id, user.email, user.username, user.passwordSalt, user.passwordHash, user.createdAt);
         }
         const token = crypto.randomBytes(32).toString('hex');
         saveSession(token, user.id);
@@ -189,6 +224,67 @@ async function handleApi(request, response, url) {
     if (!user) return sendJson(response, 401, { error: 'Faça login para continuar.' });
     if (request.method === 'GET' && url.pathname === '/api/me') {
         return sendJson(response, 200, { user: { id: user.id, username: user.username, email: user.email, role: user.role } });
+    }
+    if (url.pathname.startsWith('/api/campaigns')) {
+        if (request.method === 'GET' && url.pathname === '/api/campaigns') {
+            const campaigns = database.prepare(`SELECT c.id, c.name, c.invite_code AS inviteCode, c.owner_id AS ownerId,
+                c.created_at AS createdAt, COUNT(cm.user_id) AS memberCount
+                FROM campaigns c LEFT JOIN campaign_members cm ON cm.campaign_id = c.id
+                WHERE c.owner_id = ? OR EXISTS (SELECT 1 FROM campaign_members own WHERE own.campaign_id = c.id AND own.user_id = ?)
+                GROUP BY c.id ORDER BY c.created_at DESC`).all(user.id, user.id);
+            return sendJson(response, 200, { campaigns: campaigns.map(campaign => ({ ...campaign, isOwner: campaign.ownerId === user.id })) });
+        }
+        if (request.method === 'POST' && url.pathname === '/api/campaigns') {
+            const body = await getRequestBody(request);
+            const name = String(body.name || '').trim().slice(0, 100);
+            if (!name) return sendJson(response, 400, { error: 'Informe um nome para a campanha.' });
+            const id = crypto.randomUUID();
+            const createdAt = new Date().toISOString();
+            const inviteCode = createInviteCode();
+            database.prepare('INSERT INTO campaigns (id, owner_id, name, invite_code, created_at) VALUES (?, ?, ?, ?, ?)').run(id, user.id, name, inviteCode, createdAt);
+            database.prepare('INSERT INTO campaign_members (campaign_id, user_id, joined_at) VALUES (?, ?, ?)').run(id, user.id, createdAt);
+            return sendJson(response, 201, { id, name, inviteCode, isOwner: true, memberCount: 1 });
+        }
+        if (request.method === 'POST' && url.pathname === '/api/campaigns/join') {
+            const body = await getRequestBody(request);
+            const inviteCode = String(body.inviteCode || '').trim().toUpperCase();
+            const campaign = database.prepare('SELECT id, name, owner_id AS ownerId, invite_code AS inviteCode FROM campaigns WHERE invite_code = ?').get(inviteCode);
+            if (!campaign) return sendJson(response, 404, { error: 'Código de campanha inválido.' });
+            database.prepare('INSERT OR IGNORE INTO campaign_members (campaign_id, user_id, joined_at) VALUES (?, ?, ?)').run(campaign.id, user.id, new Date().toISOString());
+            return sendJson(response, 200, { ...campaign, isOwner: campaign.ownerId === user.id });
+        }
+        const campaignMatch = url.pathname.match(/^\/api\/campaigns\/([^/]+)(?:\/(leave|characters|invite))?$/);
+        if (!campaignMatch) return sendJson(response, 404, { error: 'Campanha não encontrada.' });
+        const campaignId = decodeURIComponent(campaignMatch[1]);
+        const action = campaignMatch[2];
+        const campaign = database.prepare('SELECT id, name, owner_id AS ownerId, invite_code AS inviteCode, created_at AS createdAt FROM campaigns WHERE id = ?').get(campaignId);
+        if (!campaign) return sendJson(response, 404, { error: 'Campanha não encontrada.' });
+        const membership = database.prepare('SELECT user_id AS userId, sheet_id AS sheetId FROM campaign_members WHERE campaign_id = ? AND user_id = ?').get(campaignId, user.id);
+        if (!membership) return sendJson(response, 403, { error: 'Você não participa desta campanha.' });
+        if (request.method === 'GET' && !action) {
+            const members = database.prepare(`SELECT cm.user_id AS userId, cm.sheet_id AS sheetId, u.email, u.username,
+                s.name AS sheetName, s.content FROM campaign_members cm JOIN users u ON u.id = cm.user_id
+                LEFT JOIN saved_sheets s ON s.id = cm.sheet_id WHERE cm.campaign_id = ?`).all(campaignId);
+            return sendJson(response, 200, { campaign: { ...campaign, isOwner: campaign.ownerId === user.id }, members: members.map(member => ({ ...member, content: undefined })) });
+        }
+        if (request.method === 'POST' && action === 'characters') {
+            const body = await getRequestBody(request);
+            const sheetId = String(body.sheetId || '');
+            const sheet = database.prepare('SELECT id, name FROM saved_sheets WHERE id = ? AND user_id = ?').get(sheetId, user.id);
+            if (!sheet) return sendJson(response, 404, { error: 'Personagem não encontrado na sua conta.' });
+            database.prepare('UPDATE campaign_members SET sheet_id = ? WHERE campaign_id = ? AND user_id = ?').run(sheetId, campaignId, user.id);
+            return sendJson(response, 200, { ok: true, sheetId, sheetName: sheet.name });
+        }
+        if (request.method === 'POST' && action === 'invite') return sendJson(response, 200, { inviteCode: campaign.inviteCode });
+        if (request.method === 'POST' && action === 'leave') {
+            if (campaign.ownerId === user.id) {
+                database.prepare('DELETE FROM campaigns WHERE id = ?').run(campaignId);
+                return sendJson(response, 200, { deleted: true });
+            }
+            database.prepare('DELETE FROM campaign_members WHERE campaign_id = ? AND user_id = ?').run(campaignId, user.id);
+            return sendJson(response, 200, { left: true });
+        }
+        return sendJson(response, 405, { error: 'Método não permitido.' });
     }
     if (url.pathname.startsWith('/api/admin/')) {
         if (user.role !== 'admin') return sendJson(response, 403, { error: 'Acesso restrito ao administrador.' });

@@ -34,6 +34,11 @@
             <button class="new-character-btn" type="button" onclick="createNewSheet()">Nova ficha</button>
     </div>
     <div class="characters-grid" id="characters-grid"></div>
+    <section class="campaigns-view" id="campaigns-view" hidden>
+        <div class="campaigns-toolbar"><button class="new-character-btn" type="button" onclick="openCampaignCreator()">Criar campanha</button><button class="file-action-btn" type="button" onclick="openJoinCampaign()">Entrar com código</button></div>
+        <div class="characters-grid" id="campaigns-grid"></div>
+    </section>
+    <section class="campaign-detail" id="campaign-detail" hidden></section>
 </section>
 
 <div class="sheet-container" id="sheet-editor" hidden>
@@ -546,9 +551,9 @@
         <div class="modal-header"><h3 id="account-title">Minha conta</h3><button class="close-btn" type="button" onclick="closeAccountMenu()">✕</button></div>
         <div class="account-actions"><button class="btn-cancel" type="button" onclick="logout(); closeAccountMenu();">Sair da conta</button></div>
         <p class="auth-feedback" id="account-feedback" role="status"></p>
-        <div class="saved-sheet-list" id="saved-sheet-list"><p class="history-empty">Carregando fichas...</p></div>
     </div>
 </div>
+<div class="modal" id="campaign-modal"><div class="modal-content"><div class="modal-header"><h3 id="campaign-modal-title">Criar campanha</h3><button class="close-btn" type="button" onclick="closeModal('campaign-modal')">✕</button></div><div class="modal-field"><label id="campaign-modal-label">Nome da campanha</label><input id="campaign-modal-input" type="text"></div><div class="modal-actions"><button class="btn-cancel" type="button" onclick="closeModal('campaign-modal')">Cancelar</button><button class="action-purple-btn" type="button" onclick="submitCampaignModal()">Continuar</button></div></div></div>
 
 <div class="save-modal modal" id="save-modal">
     <div class="modal-content save-content">
