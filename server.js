@@ -211,7 +211,16 @@ async function handleApi(request, response, url) {
     }
     if (request.method === 'GET' && url.pathname === '/api/sheets') {
         const sheets = database.prepare('SELECT id, name, updated_at AS updatedAt FROM saved_sheets WHERE user_id = ? ORDER BY updated_at DESC').all(user.id);
-        return sendJson(response, 200, { sheets });
+        return sendJson(response, 200, { sheets: sheets.map(sheet => {
+            const content = database.prepare('SELECT content FROM saved_sheets WHERE id = ? AND user_id = ?').get(sheet.id, user.id);
+            const data = content ? JSON.parse(content.content) : {};
+            return {
+                ...sheet,
+                characterName: data.fields?.['char-name'] || sheet.name,
+                characterClass: data.fields?.['char-class'] || 'Sem classe',
+                avatar: data.avatar || ''
+            };
+        }) });
     }
     if (request.method === 'POST' && url.pathname === '/api/sheets') {
         const body = await getRequestBody(request);

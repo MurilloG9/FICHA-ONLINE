@@ -8,10 +8,26 @@
 </head>
 <body>
 
-<div class="sheet-container">
+<section class="characters-view" id="characters-view">
+    <header class="characters-header">
+        <div>
+            <span class="characters-eyebrow">Viewpoint</span>
+            <h1>Personagens</h1>
+            <p id="characters-count">Fichas: 0</p>
+        </div>
+        <div class="characters-header-actions">
+            <button class="file-action-btn home-login-action" id="home-login-btn" type="button" onclick="openAccountMenu()">Login</button>
+            <button class="new-character-btn" type="button" onclick="createNewSheet()">Nova ficha</button>
+        </div>
+    </header>
+    <div class="characters-grid" id="characters-grid"></div>
+</section>
+
+<div class="sheet-container" id="sheet-editor" hidden>
 
     <div class="header-title-box">
         <div class="file-actions">
+            <button class="file-action-btn" type="button" onclick="showCharactersView()">Personagens</button>
             <button class="file-action-btn" type="button" onclick="openSaveOptions()">Salvar ficha</button>
             <button class="file-action-btn" type="button" onclick="document.getElementById('sheet-file-input').click()">Abrir ficha</button>
             <button class="file-action-btn" type="button" onclick="toggleHistory()">Histórico</button>

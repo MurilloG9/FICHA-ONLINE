@@ -21,7 +21,7 @@
         }
 
         body {
-            background-color: var(--bg-color);
+            background: #111;
             color: var(--text-light);
             display: flex;
             justify-content: center;
@@ -29,6 +29,161 @@
             min-height: 100vh;
             overflow-x: hidden;
             overflow-y: auto;
+        }
+
+        .characters-view {
+            width: min(1220px, 100%);
+            min-height: calc(100vh - 40px);
+            padding: 28px 0;
+        }
+
+        .characters-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+
+        .characters-eyebrow {
+            color: #a855f7;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .characters-header h1 {
+            margin-top: 4px;
+            color: #f5f5f5;
+            font-size: clamp(30px, 5vw, 42px);
+        }
+
+        .characters-header p {
+            margin-top: 8px;
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .characters-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .home-login-action {
+            order: -1;
+            position: static;
+        }
+
+        .new-character-btn,
+        .characters-empty button {
+            border: 0;
+            border-radius: 3px;
+            padding: 10px 14px;
+            background: #a855f7;
+            color: #fff;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .new-character-btn:hover,
+        .characters-empty button:hover {
+            background: #c084fc;
+        }
+
+        .characters-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 40px 68px;
+        }
+
+        .character-card {
+            min-height: 128px;
+            display: flex;
+            overflow: hidden;
+            border-radius: 4px;
+            background: #202020;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, .22);
+        }
+
+        .character-avatar {
+            width: 128px;
+            flex: 0 0 128px;
+            display: grid;
+            place-items: center;
+            background-color: #333;
+            background-position: center;
+            background-size: cover;
+            color: #c084fc;
+            font-size: 46px;
+            font-weight: 700;
+        }
+
+        .character-card-content {
+            min-width: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 16px 12px 10px;
+        }
+
+        .character-card h2 {
+            max-width: 100%;
+            overflow: hidden;
+            color: #fff;
+            font-size: 22px;
+            font-weight: 500;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .character-card p {
+            margin-top: 2px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .character-card small {
+            margin-top: 10px;
+            color: #aaa;
+            font-size: 10px;
+        }
+
+        .character-card button {
+            align-self: flex-end;
+            margin-top: auto;
+            border: 0;
+            border-radius: 2px;
+            padding: 6px 8px;
+            background: #a855f7;
+            color: #fff;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .characters-empty {
+            grid-column: 1 / -1;
+            display: grid;
+            justify-items: center;
+            gap: 10px;
+            padding: 80px 20px;
+            border: 1px dashed #444;
+            border-radius: 6px;
+            color: #aaa;
+            text-align: center;
+        }
+
+        .characters-empty strong {
+            color: #fff;
+            font-size: 18px;
+        }
+
+        .characters-empty span {
+            font-size: 13px;
         }
 
         .sheet-container {
@@ -681,6 +836,20 @@
         }
 
         @media (max-width: 600px) {
+            .characters-header {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .characters-header-actions {
+                justify-content: space-between;
+            }
+
+            .characters-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
             .class-picker-grid {
                 grid-template-columns: 1fr;
             }

@@ -608,6 +608,8 @@ async function submitAuth(event) {
         localStorage.setItem('ficha-auth-token', authToken);
         updateAuthButton(result.user);
         closeAuthModal();
+        await loadCharacterCards();
+        showCharactersView();
         alert('Login realizado. Suas fichas agora podem ser salvas na conta.');
     } catch (error) {
         feedback.innerText = error.message || 'Não foi possível conectar ao servidor.';
@@ -619,6 +621,7 @@ async function logout() {
     currentUser = null;
     localStorage.removeItem('ficha-auth-token');
     updateAuthButton();
+    showCharactersView();
 }
 function updateAuthButton(user) {
     const button = document.getElementById('login-btn');
@@ -628,6 +631,68 @@ function updateAuthButton(user) {
     if (user) currentUser = user;
     button.title = authToken ? 'Sair da conta' : 'Entrar';
     if (adminButton) adminButton.hidden = user?.role !== 'admin';
+    const homeButton = document.getElementById('home-login-btn');
+    if (homeButton) homeButton.innerText = user?.username || user?.email?.split('@')[0] || (authToken ? 'Conta' : 'Login');
+}
+function showCharactersView() {
+    document.getElementById('characters-view').hidden = false;
+    document.getElementById('sheet-editor').hidden = true;
+    loadCharacterCards();
+}
+function showSheetEditor() {
+    document.getElementById('characters-view').hidden = true;
+    document.getElementById('sheet-editor').hidden = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function createNewSheet() {
+    if (!authToken) return openAuthModal();
+    sessionStorage.setItem('new-sheet', 'true');
+    window.location.reload();
+}
+function createCharacterCard(sheet) {
+    const card = document.createElement('article');
+    card.className = 'character-card';
+    const avatar = document.createElement('div');
+    avatar.className = 'character-avatar';
+    if (sheet.avatar) avatar.style.backgroundImage = sheet.avatar;
+    else avatar.innerText = (sheet.characterName || sheet.name || '?').slice(0, 1).toUpperCase();
+    const content = document.createElement('div');
+    content.className = 'character-card-content';
+    const name = document.createElement('h2');
+    name.innerText = sheet.characterName || sheet.name;
+    const characterClass = document.createElement('p');
+    characterClass.innerText = sheet.characterClass || 'Sem classe';
+    const date = document.createElement('small');
+    date.innerText = `Atualizada em ${new Date(sheet.updatedAt).toLocaleDateString('pt-BR')}`;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.innerText = 'Acessar ficha';
+    button.onclick = () => loadSavedAccountSheet(sheet.id);
+    content.append(name, characterClass, date, button);
+    card.append(avatar, content);
+    return card;
+}
+async function loadCharacterCards() {
+    const grid = document.getElementById('characters-grid');
+    const count = document.getElementById('characters-count');
+    if (!grid || !count) return;
+    if (!authToken) {
+        count.innerText = 'Entre para ver suas fichas';
+        grid.innerHTML = '<div class="characters-empty"><strong>Suas fichas aparecem aqui</strong><span>Faça login para acessar e criar personagens.</span><button type="button" onclick="openAuthModal()">Entrar</button></div>';
+        return;
+    }
+    try {
+        const response = await fetch(apiUrl('/api/sheets'), { headers: { Authorization: `Bearer ${authToken}` } });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Não foi possível carregar as fichas.');
+        count.innerText = `Fichas: ${result.sheets.length}`;
+        grid.innerHTML = '';
+        result.sheets.forEach(sheet => grid.appendChild(createCharacterCard(sheet)));
+        if (!result.sheets.length) grid.innerHTML = '<div class="characters-empty"><strong>Nenhuma ficha criada</strong><span>Comece criando sua primeira ficha.</span><button type="button" onclick="createNewSheet()">Nova ficha</button></div>';
+    } catch (error) {
+        count.innerText = 'Não foi possível carregar as fichas';
+        grid.innerHTML = `<div class="characters-empty"><strong>${escapeAdminText(error.message)}</strong></div>`;
+    }
 }
 function openAccountMenu() {
     if (!authToken) return openAuthModal();
@@ -668,6 +733,7 @@ async function loadSavedAccountSheet(sheetId) {
         if (!response.ok) throw new Error(result.error || 'Não foi possível carregar a ficha.');
         restoreSheetData(result.sheet);
         closeAccountMenu();
+        showSheetEditor();
         feedback.innerText = `Ficha "${result.name}" carregada.`;
     } catch (error) {
         feedback.innerText = error.message || 'Não foi possível carregar a ficha.';
@@ -752,14 +818,23 @@ async function loadSheetFromAccount() {
     return;
 }
 async function restoreAuthSession() {
-    if (!authToken)
-        return updateAuthButton();
+    if (!authToken) {
+        updateAuthButton();
+        return showCharactersView();
+    }
     try {
         const response = await fetch(apiUrl('/api/me'), { headers: { Authorization: `Bearer ${authToken}` } });
         if (!response.ok)
             return logout();
         const result = await response.json();
         updateAuthButton(result.user);
+        if (sessionStorage.getItem('new-sheet') === 'true') {
+            sessionStorage.removeItem('new-sheet');
+            showSheetEditor();
+            return;
+        }
+        await loadCharacterCards();
+        showCharactersView();
     }
     catch (error) {
         updateAuthButton();
