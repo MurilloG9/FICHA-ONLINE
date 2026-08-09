@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ficha RPG - Viewpoint</title>
-        <link rel="stylesheet" href="style.css?v=shared-header-1">
+        <link rel="stylesheet" href="style.css?v=shared-header-2">
 </head>
 <body>
 
@@ -26,22 +26,19 @@
             <h1>Personagens</h1>
             <p id="characters-count">Fichas: 0</p>
         </div>
-        <div class="characters-header-actions">
-            <button class="file-action-btn home-login-action" id="home-login-btn" type="button" onclick="openAccountMenu()">Login</button>
+        <button class="file-action-btn home-login-action" id="home-login-btn" type="button" onclick="openAccountMenu()">Login</button>
+    </header>
+    <div class="characters-header-actions">
             <button class="file-action-btn open-sheet-home-btn" type="button" onclick="document.getElementById('sheet-file-input').click()">Abrir ficha</button>
             <input type="file" id="sheet-file-input" accept=".txt,.html,text/plain,text/html" hidden onchange="loadSavedSheet(event)">
             <button class="new-character-btn" type="button" onclick="createNewSheet()">Nova ficha</button>
-        </div>
-    </header>
+    </div>
     <div class="characters-grid" id="characters-grid"></div>
 </section>
 
 <div class="sheet-container" id="sheet-editor" hidden>
 
     <div class="header-title-box site-header">
-        <div class="file-actions">
-            <button class="file-action-btn" type="button" onclick="showCharactersView()">Personagens</button>
-        </div>
         <nav class="site-tabs editor-site-tabs" aria-label="Seções do site">
             <button class="site-tab active" type="button" data-section="characters" onclick="showCharactersView()">Personagens</button>
             <button class="site-tab" type="button" data-section="campaigns" onclick="selectSiteSection('campaigns')">Campanhas</button>
@@ -572,7 +569,7 @@
 </div>
 
     <script>window.API_BASE_URL = 'https://ficha-online-api.onrender.com';</script>
-    <script src="script.js?v=shared-header-1"></script>
+    <script src="script.js?v=shared-header-2"></script>
 
 </body>
 </html>

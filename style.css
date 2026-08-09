@@ -163,6 +163,13 @@
             gap: 10px;
         }
 
+        .characters-view > .characters-header-actions {
+            justify-content: flex-end;
+            min-height: 48px;
+            margin-top: 0;
+            padding: 8px 0;
+        }
+
         .home-login-action {
             position: absolute;
             top: 28px;
@@ -998,15 +1005,11 @@
         }
 
         .open-sheet-home-btn {
-            position: absolute;
-            top: 28px;
-            right: 118px;
+            position: static;
         }
 
-        .characters-header-actions .new-character-btn {
-            position: absolute;
-            top: 28px;
-            right: 0;
+        .characters-view > .characters-header-actions .new-character-btn {
+            position: static;
         }
 
         .header-title-box {
