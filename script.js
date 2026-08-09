@@ -643,22 +643,39 @@ function showCharactersView() {
 }
 function finishShowingCharacters() {
     document.body.classList.remove('sheet-open');
+    const charactersView = document.getElementById('characters-view');
+    if (charactersView) charactersView.classList.remove('campaigns-mode');
     document.getElementById('characters-view').hidden = false;
     document.getElementById('sheet-editor').hidden = true;
+    const actions = document.querySelector('.characters-header-actions');
+    if (actions) actions.hidden = false;
+    const heading = document.querySelector('.characters-header h1');
+    if (heading) heading.innerText = 'Personagens';
+    const count = document.getElementById('characters-count');
+    if (count) count.innerText = 'Fichas: 0';
     loadCharacterCards();
 }
 function selectSiteSection(section) {
     document.querySelectorAll('.site-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.section === section));
-    document.getElementById('characters-grid').hidden = section !== 'characters';
-    document.getElementById('campaigns-view').hidden = section !== 'campaigns';
-    document.getElementById('campaign-detail').hidden = true;
+    const charactersView = document.getElementById('characters-view');
+    const charactersActions = document.querySelector('.characters-header-actions');
+    const heading = document.querySelector('.characters-header h1');
+    const count = document.getElementById('characters-count');
+    const charactersGrid = document.getElementById('characters-grid');
+    const campaignsView = document.getElementById('campaigns-view');
+    const campaignsGrid = document.getElementById('campaigns-grid');
+    const campaignDetail = document.getElementById('campaign-detail');
+    if (charactersView) charactersView.classList.toggle('campaigns-mode', section === 'campaigns');
+    if (charactersActions) charactersActions.hidden = section === 'campaigns';
+    if (heading) heading.innerText = section === 'campaigns' ? 'Campanhas' : 'Personagens';
+    if (count) count.innerText = section === 'campaigns' ? 'Gerencie suas campanhas' : 'Fichas: 0';
+    if (charactersGrid) charactersGrid.hidden = section !== 'characters';
+    if (campaignsView) campaignsView.hidden = section !== 'campaigns';
+    if (campaignsGrid) campaignsGrid.hidden = section !== 'campaigns';
+    if (campaignDetail) campaignDetail.hidden = true;
     if (section === 'characters') return loadCharacterCards();
     if (section === 'campaigns') return loadCampaigns();
-    const count = document.getElementById('characters-count');
-    const grid = document.getElementById('characters-grid');
-    const title = section === 'campaigns' ? 'Campanhas' : 'Inimigos';
-    if (count) count.innerText = title;
-    if (grid) grid.innerHTML = `<div class="characters-empty"><strong>${title}</strong><span>Esta seção está pronta para receber seus registros.</span></div>`;
+    if (charactersGrid) charactersGrid.innerHTML = '<div class="characters-empty"><strong>Em breve</strong><span>Esta seção está pronta para receber seus registros.</span></div>';
 }
 let campaignModalMode = 'create';
 function openCampaignCreator() { campaignModalMode = 'create'; document.getElementById('campaign-modal-title').innerText = 'Criar campanha'; document.getElementById('campaign-modal-label').innerText = 'Nome da campanha'; document.getElementById('campaign-modal-input').value = ''; document.getElementById('campaign-modal').style.display = 'flex'; }
