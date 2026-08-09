@@ -30,6 +30,7 @@ const skillsData = [
     { name: "Tecnologia", attr: "INT" },
     { name: "Vontade", attr: "PRE" }
 ];
+// Estado global da interface, autenticação e ficha atual.
 let isStatusEditMode = false;
 let soundsMuted = false;
 let editingAttack = null;
@@ -243,6 +244,7 @@ function toggleClassEvolution(event) {
 function evolutionButtonIsVisible() {
     return document.getElementById('class-evolution-btn')?.classList.contains('visible');
 }
+// Renderização das perícias e do painel de bônus da ficha.
 function renderSkills() {
     const container = document.getElementById('skills-container');
     if (container.children.length > 0)
@@ -603,6 +605,7 @@ function setAuthMode(mode) {
     document.getElementById('register-tab').classList.toggle('active', mode === 'register');
     document.getElementById('auth-feedback').innerText = '';
 }
+// Funções de autenticação, login, logout e atualização do botão de conta.
 async function submitAuth(event) {
     event.preventDefault();
     const feedback = document.getElementById('auth-feedback');
@@ -639,6 +642,7 @@ async function logout() {
     updateAuthButton();
     showCharactersView();
 }
+// Atualiza os botões de conta e admin conforme o estado do usuário logado.
 function updateAuthButton(user) {
     const button = document.getElementById('login-btn');
     const adminButton = document.getElementById('admin-users-btn');
@@ -667,6 +671,7 @@ function finishShowingCharacters() {
     if (count) count.innerText = 'Fichas: 0';
     loadCharacterCards();
 }
+// Controle da navegação entre as abas de personagens, campanhas e inimigos.
 function selectSiteSection(section) {
     document.querySelectorAll('.site-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.section === section));
     const charactersView = document.getElementById('characters-view');
@@ -718,6 +723,7 @@ function openJoinCampaign() {
     document.getElementById('campaign-modal-input').value = '';
     document.getElementById('campaign-modal').style.display = 'flex';
 }
+// Exibe o estado vazio da aba de campanhas quando ela estiver em manutenção.
 function renderCampaignsEmptyState(message) {
     const grid = document.getElementById('campaigns-grid');
     if (!grid) return;

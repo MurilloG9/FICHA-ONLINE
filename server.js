@@ -4,6 +4,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const Database = require('better-sqlite3');
 
+// Carrega variáveis locais de ambiente quando houver um arquivo .env.
 function loadLocalEnv() {
     const envFile = path.join(__dirname, '.env');
     if (!fs.existsSync(envFile)) return;
@@ -95,6 +96,7 @@ function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
     return { salt, hash };
 }
 
+// Garante que o usuário administrador exista quando uma senha for configurada.
 function ensureAdminUser() {
     if (!ADMIN_PASSWORD) return;
     const passwordData = hashPassword(ADMIN_PASSWORD);
@@ -172,6 +174,7 @@ function getUser(request) {
     return user || null;
 }
 
+// Centraliza as rotas da API para autenticação, fichas, campanhas e administração.
 async function handleApi(request, response, url) {
     if (request.method === 'POST' && (url.pathname === '/api/register' || url.pathname === '/api/login')) {
         const body = await getRequestBody(request);
@@ -431,6 +434,7 @@ async function handleApi(request, response, url) {
     return sendJson(response, 404, { error: 'Rota não encontrada.' });
 }
 
+// Entrega os arquivos estáticos do app (HTML, CSS e JavaScript).
 function serveStatic(request, response, url) {
     const requestedPath = url.pathname === '/' ? '/index.html' : url.pathname;
     const filePath = path.resolve(ROOT, `.${requestedPath}`);

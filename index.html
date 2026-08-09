@@ -8,6 +8,7 @@
 </head>
 <body>
 
+<!-- Tela inicial do app: navegação entre personagens, campanhas e inimigos -->
 <section class="characters-view" id="characters-view">
     <header class="characters-header site-header">
         <div>
@@ -26,14 +27,19 @@
             <h1>Personagens</h1>
             <p id="characters-count">Fichas: 0</p>
         </div>
+        <!-- Botão de administração exibido apenas para usuários admin -->
+        <button class="file-action-btn admin-users-action" id="admin-users-btn" type="button" onclick="openAdminUsers()" hidden>Usuários</button>
         <button class="file-action-btn home-login-action" id="home-login-btn" type="button" onclick="openAccountMenu()">Login</button>
     </header>
+    <!-- Barra de ações da tela inicial: abrir ficha salva e criar nova ficha -->
     <div class="characters-header-actions">
             <button class="file-action-btn open-sheet-home-btn" type="button" onclick="document.getElementById('sheet-file-input').click()">Abrir ficha</button>
             <input type="file" id="sheet-file-input" accept=".txt,.html,text/plain,text/html" hidden onchange="loadSavedSheet(event)">
             <button class="new-character-btn" type="button" onclick="createNewSheet()">Nova ficha</button>
     </div>
+    <!-- Grade onde as fichas salvas aparecem na tela inicial -->
     <div class="characters-grid" id="characters-grid"></div>
+    <!-- Área da aba de campanhas, atualmente em manutenção -->
     <section class="campaigns-view" id="campaigns-view" hidden>
         <div class="campaigns-toolbar" hidden></div>
         <div class="characters-grid" id="campaigns-grid"></div>
@@ -41,6 +47,7 @@
     <section class="campaign-detail" id="campaign-detail" hidden></section>
 </section>
 
+<!-- Área da ficha aberta para edição do personagem -->
 <div class="sheet-container" id="sheet-editor" hidden>
 
     <div class="header-title-box site-header">
@@ -56,7 +63,6 @@
             </svg>
         </button>
         <button class="file-action-btn login-action" id="login-btn" type="button" onclick="openAccountMenu()">Login</button>
-        <button class="file-action-btn admin-users-action" id="admin-users-btn" type="button" onclick="openAdminUsers()" hidden>Usuários</button>
         <div class="settings-panel" id="settings-panel">
             <label class="settings-option" for="sound-mute-toggle">
                 <span>Mutar sons</span>
