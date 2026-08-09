@@ -368,11 +368,16 @@ document.addEventListener('click', function (e) {
         document.getElementById('class-picker-menu')?.classList.remove('open');
     }
 });
-function updateSkill(index) {
+function getSkillBonus(index) {
     const treino = parseInt(document.getElementById(`skill-treino-${index}`).value) || 0;
     const outros = parseInt(document.getElementById(`skill-outros-${index}`).value) || 0;
     const classBonus = parseInt(document.getElementById(`skill-outros-${index}`).dataset.classBonus) || 0;
-    const bonus = treino + Math.max(outros, classBonus);
+    const regularBonus = treino + outros;
+    return classBonus > 0 ? Math.max(regularBonus, classBonus) : regularBonus;
+}
+function updateSkill(index) {
+    const treino = parseInt(document.getElementById(`skill-treino-${index}`).value) || 0;
+    const bonus = getSkillBonus(index);
     document.getElementById(`skill-bonus-${index}`).innerText = `( ${bonus} )`;
     const row = document.getElementById(`skill-row-${index}`);
     row.classList.remove('skill-level-2', 'skill-level-5', 'skill-level-7', 'skill-level-10');
@@ -417,9 +422,7 @@ function rollSkill(skillName, attrCode, index) {
     const attrInputId = attrMap[attrCode];
     const rawAttrVal = parseInt(document.getElementById(attrInputId).value) || 0;
     const attrBonus = rawAttrVal * 2;
-    const treino = parseInt(document.getElementById(`skill-treino-${index}`).value) || 0;
-    const outros = parseInt(document.getElementById(`skill-outros-${index}`).value) || 0;
-    const skillBonus = treino + outros;
+    const skillBonus = getSkillBonus(index);
     const totalBonus = attrBonus + skillBonus;
     rollD20(`${skillName} (${attrCode})`, totalBonus, `D20 + Atributo (${attrBonus}) + Bônus (${skillBonus})`);
 }
@@ -668,6 +671,8 @@ function selectSiteSection(section) {
     document.querySelectorAll('.site-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.section === section));
     const charactersView = document.getElementById('characters-view');
     const charactersActions = document.querySelector('.characters-header-actions');
+    const openButton = document.querySelector('.characters-header-actions .open-sheet-home-btn');
+    const createButton = document.querySelector('.characters-header-actions .new-character-btn');
     const heading = document.querySelector('.characters-header h1');
     const count = document.getElementById('characters-count');
     const charactersGrid = document.getElementById('characters-grid');
@@ -676,14 +681,26 @@ function selectSiteSection(section) {
     const campaignDetail = document.getElementById('campaign-detail');
     if (charactersView) charactersView.classList.toggle('campaigns-mode', section === 'campaigns');
     if (charactersActions) charactersActions.hidden = section === 'campaigns';
+    if (openButton) openButton.hidden = section === 'campaigns';
+    if (createButton) createButton.hidden = section === 'campaigns' || section === 'enemies';
     if (heading) heading.innerText = section === 'campaigns' ? 'Campanhas' : 'Personagens';
-    if (count) count.innerText = section === 'campaigns' ? 'Gerencie suas campanhas' : 'Fichas: 0';
+    if (count) count.innerText = section === 'campaigns' ? 'Em breve' : 'Fichas: 0';
     if (charactersGrid) charactersGrid.hidden = section !== 'characters';
-    if (campaignsView) campaignsView.hidden = section !== 'campaigns';
+    if (campaignsView) {
+        campaignsView.hidden = section !== 'campaigns';
+        const toolbar = campaignsView.querySelector('.campaigns-toolbar');
+        if (toolbar) toolbar.hidden = true;
+    }
     if (campaignsGrid) campaignsGrid.hidden = section !== 'campaigns';
     if (campaignDetail) campaignDetail.hidden = true;
     if (section === 'characters') return loadCharacterCards();
-    if (section === 'campaigns') return loadCampaigns();
+    if (section === 'campaigns') {
+        if (campaignsGrid) {
+            campaignsGrid.hidden = false;
+            campaignsGrid.innerHTML = '<div class="characters-empty"><strong>Em breve</strong><span>Esta seção está pronta para receber seus registros.</span></div>';
+        }
+        return;
+    }
     if (charactersGrid) charactersGrid.innerHTML = '<div class="characters-empty"><strong>Em breve</strong><span>Esta seção está pronta para receber seus registros.</span></div>';
 }
 let campaignModalMode = 'create';
@@ -725,33 +742,7 @@ async function submitCampaignModal() {
 async function loadCampaigns() {
     const grid = document.getElementById('campaigns-grid');
     if (!grid) return;
-    if (!authToken) {
-        renderCampaignsEmptyState('Faça login para ver suas campanhas');
-        return;
-    }
-    try {
-        const response = await fetch(apiUrl('/api/campaigns'), { headers: { Authorization: `Bearer ${authToken}` } });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Não foi possível carregar as campanhas.');
-        const campaigns = Array.isArray(result.campaigns) ? result.campaigns : [];
-        if (!campaigns.length) {
-            renderCampaignsEmptyState('Nenhuma campanha ainda');
-            return;
-        }
-        grid.innerHTML = campaigns.map(campaign => `
-            <article class="campaign-card">
-                <div class="campaign-icon" aria-hidden="true">⚔</div>
-                <div class="campaign-card-content">
-                    <h2>${escapeAdminText(campaign.name)}</h2>
-                    <p>${campaign.memberCount} jogador${campaign.memberCount === 1 ? '' : 'es'}</p>
-                    <small>Código: ${escapeAdminText(campaign.inviteCode)}</small>
-                </div>
-                <button type="button" onclick="openCampaign('${campaign.id}')">Abrir</button>
-            </article>
-        `).join('');
-    } catch (error) {
-        renderCampaignsEmptyState(error.message || 'Não foi possível carregar as campanhas');
-    }
+    renderCampaignsEmptyState('Em breve');
 }
 async function openCampaign(id) {
     const response = await fetch(apiUrl(`/api/campaigns/${encodeURIComponent(id)}`), { headers: { Authorization: `Bearer ${authToken}` } });
