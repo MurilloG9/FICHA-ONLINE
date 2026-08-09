@@ -39,6 +39,7 @@ let authToken = localStorage.getItem('ficha-auth-token') || '';
 let currentUser = null;
 let currentSheetId = null;
 let currentSheetName = '';
+let autoSaveTimer = null;
 const apiOrigin = window.API_BASE_URL || (window.location.protocol === 'file:' || ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '3000') ? 'http://localhost:3000' : '');
 const apiUrl = path => `${apiOrigin}${path}`;
 const classEvolutions = {
@@ -618,6 +619,7 @@ async function submitAuth(event) {
     }
 }
 async function logout() {
+    await saveCurrentSheet();
     try { await fetch(apiUrl('/api/logout'), { method: 'POST', headers: { Authorization: `Bearer ${authToken}` } }); } catch (error) { /* sessão local ainda pode ser encerrada */ }
     authToken = '';
     currentUser = null;
@@ -648,6 +650,7 @@ function showSheetEditor() {
     document.getElementById('characters-view').hidden = true;
     document.getElementById('sheet-editor').hidden = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    ensureCurrentSheet();
 }
 function createNewSheet() {
     if (!authToken) return openAuthModal();
@@ -854,6 +857,20 @@ async function saveCurrentSheet() {
         return;
     }
     await fetch(apiUrl(`/api/sheets/${encodeURIComponent(currentSheetId)}`), { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ sheet }), keepalive: true });
+}
+function scheduleAutoSave() {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => saveCurrentSheet(), 700);
+}
+async function ensureCurrentSheet() {
+    if (!authToken || currentSheetId || document.getElementById('sheet-editor')?.hidden) return;
+    const name = currentSheetName || document.getElementById('char-name')?.value?.trim() || 'Minha ficha';
+    const response = await fetch(apiUrl('/api/sheets'), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ name, sheet: collectSheetData() }) });
+    if (response.ok) {
+        const result = await response.json();
+        currentSheetId = result.id;
+        currentSheetName = result.name;
+    }
 }
 async function loadSheetFromAccount() {
     return;
@@ -1442,3 +1459,5 @@ calculateSheet();
 restoreAuthSession();
 updateBars();
 window.addEventListener('beforeunload', () => { saveCurrentSheet(); });
+document.addEventListener('input', scheduleAutoSave);
+document.addEventListener('change', scheduleAutoSave);
