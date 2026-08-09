@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ficha RPG - Viewpoint</title>
-        <link rel="stylesheet" href="style.css?v=autosave-layout-4">
+        <link rel="stylesheet" href="style.css?v=site-tabs-1">
 </head>
 <body>
 
@@ -18,6 +18,11 @@
                 </svg>
                 <div class="brand-title">Viewpoint</div>
             </div>
+            <nav class="site-tabs" aria-label="Seções do site">
+                <button class="site-tab active" type="button" data-section="characters" onclick="selectSiteSection('characters')">Personagens</button>
+                <button class="site-tab" type="button" data-section="campaigns" onclick="selectSiteSection('campaigns')">Campanhas</button>
+                <button class="site-tab" type="button" data-section="enemies" onclick="selectSiteSection('enemies')">Inimigos</button>
+            </nav>
             <h1>Personagens</h1>
             <p id="characters-count">Fichas: 0</p>
         </div>
@@ -562,7 +567,7 @@
 </div>
 
     <script>window.API_BASE_URL = 'https://ficha-online-api.onrender.com';</script>
-    <script src="script.js?v=autosave-layout-4"></script>
+    <script src="script.js?v=site-tabs-1"></script>
 
 </body>
 </html>

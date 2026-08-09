@@ -646,6 +646,15 @@ function finishShowingCharacters() {
     document.getElementById('sheet-editor').hidden = true;
     loadCharacterCards();
 }
+function selectSiteSection(section) {
+    document.querySelectorAll('.site-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.section === section));
+    if (section === 'characters') return loadCharacterCards();
+    const count = document.getElementById('characters-count');
+    const grid = document.getElementById('characters-grid');
+    const title = section === 'campaigns' ? 'Campanhas' : 'Inimigos';
+    if (count) count.innerText = title;
+    if (grid) grid.innerHTML = `<div class="characters-empty"><strong>${title}</strong><span>Esta seção está pronta para receber seus registros.</span></div>`;
+}
 function showSheetEditor() {
     document.getElementById('characters-view').hidden = true;
     document.getElementById('sheet-editor').hidden = false;

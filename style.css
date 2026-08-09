@@ -71,6 +71,31 @@
             font-size: 14px;
         }
 
+        .site-tabs {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: -10px;
+            margin-left: 112px;
+        }
+
+        .site-tab {
+            border: 0;
+            border-bottom: 2px solid transparent;
+            padding: 8px 14px;
+            background: transparent;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .site-tab:hover,
+        .site-tab.active {
+            border-bottom-color: #a855f7;
+            color: #fff;
+        }
+
         .characters-header-actions {
             display: flex;
             align-items: center;
