@@ -40,7 +40,16 @@ let currentUser = null;
 let currentSheetId = null;
 let currentSheetName = '';
 let autoSaveTimer = null;
-const apiOrigin = window.API_BASE_URL || (window.location.protocol === 'file:' || ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '3000') ? 'http://localhost:3000' : '');
+function resolveApiOrigin() {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:3000';
+    }
+    if (window.location.hostname === 'murillog9.github.io') {
+        return 'https://ficha-online-api.onrender.com';
+    }
+    return window.API_BASE_URL || 'https://ficha-online-api.onrender.com';
+}
+const apiOrigin = resolveApiOrigin();
 const apiUrl = path => `${apiOrigin}${path}`;
 const classEvolutions = {
     Fortalecedor: ['Guerreiro', 'Assassino', 'Tank'],
