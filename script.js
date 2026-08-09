@@ -105,11 +105,11 @@ function applyClassBenefits() {
     const primary = getPrimaryClass();
     const benefit = getClassBenefit(primary);
     const classBonusBySkill = {};
-    benefit.fixed.forEach(skill => classBonusBySkill[skill] = (classBonusBySkill[skill] || 0) + 2);
+    benefit.fixed.forEach(skill => classBonusBySkill[skill] = 2);
     benefit.groups.forEach((_, index) => {
         const selected = getClassChoice(`class-choice-${index}`);
         if (selected)
-            classBonusBySkill[selected] = (classBonusBySkill[selected] || 0) + 2;
+            classBonusBySkill[selected] = 2;
     });
     skillsData.forEach((skill, index) => {
         const input = document.getElementById(`skill-outros-${index}`);
@@ -360,7 +360,7 @@ function updateSkill(index) {
     const treino = parseInt(document.getElementById(`skill-treino-${index}`).value) || 0;
     const outros = parseInt(document.getElementById(`skill-outros-${index}`).value) || 0;
     const classBonus = parseInt(document.getElementById(`skill-outros-${index}`).dataset.classBonus) || 0;
-    const bonus = treino + outros + classBonus;
+    const bonus = treino + Math.max(outros, classBonus);
     document.getElementById(`skill-bonus-${index}`).innerText = `( ${bonus} )`;
     const row = document.getElementById(`skill-row-${index}`);
     row.classList.remove('skill-level-2', 'skill-level-5', 'skill-level-7', 'skill-level-10');
