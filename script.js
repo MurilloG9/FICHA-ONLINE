@@ -37,6 +37,8 @@ let editingAbility = null;
 let authMode = 'login';
 let authToken = localStorage.getItem('ficha-auth-token') || '';
 let currentUser = null;
+let currentSheetId = null;
+let currentSheetName = '';
 const apiOrigin = window.API_BASE_URL || (window.location.protocol === 'file:' || ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '3000') ? 'http://localhost:3000' : '');
 const apiUrl = path => `${apiOrigin}${path}`;
 const classEvolutions = {
@@ -635,6 +637,9 @@ function updateAuthButton(user) {
     if (homeButton) homeButton.innerText = user?.username || user?.email?.split('@')[0] || (authToken ? 'Conta' : 'Login');
 }
 function showCharactersView() {
+    saveCurrentSheet().finally(() => finishShowingCharacters());
+}
+function finishShowingCharacters() {
     document.getElementById('characters-view').hidden = false;
     document.getElementById('sheet-editor').hidden = true;
     loadCharacterCards();
@@ -664,11 +669,19 @@ function createCharacterCard(sheet) {
     characterClass.innerText = sheet.characterClass || 'Sem classe';
     const date = document.createElement('small');
     date.innerText = `Atualizada em ${new Date(sheet.updatedAt).toLocaleDateString('pt-BR')}`;
+    const actions = document.createElement('div');
+    actions.className = 'character-card-actions';
     const button = document.createElement('button');
     button.type = 'button';
     button.innerText = 'Acessar ficha';
     button.onclick = () => loadSavedAccountSheet(sheet.id);
-    content.append(name, characterClass, date, button);
+    const exportButton = document.createElement('button');
+    exportButton.type = 'button';
+    exportButton.className = 'character-export-btn';
+    exportButton.innerText = 'Exportar';
+    exportButton.onclick = () => exportSavedAccountSheet(sheet.id, sheet.name);
+    actions.append(button, exportButton);
+    content.append(name, characterClass, date, actions);
     card.append(avatar, content);
     return card;
 }
@@ -732,12 +745,25 @@ async function loadSavedAccountSheet(sheetId) {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Não foi possível carregar a ficha.');
         restoreSheetData(result.sheet);
+        currentSheetId = sheetId;
+        currentSheetName = result.name || 'Minha ficha';
         closeAccountMenu();
         showSheetEditor();
         feedback.innerText = `Ficha "${result.name}" carregada.`;
     } catch (error) {
         feedback.innerText = error.message || 'Não foi possível carregar a ficha.';
     }
+}
+async function exportSavedAccountSheet(sheetId, fallbackName) {
+    const response = await fetch(apiUrl(`/api/sheets/${encodeURIComponent(sheetId)}`), { headers: { Authorization: `Bearer ${authToken}` } });
+    const result = await response.json();
+    if (!response.ok) return alert(result.error || 'Não foi possível exportar a ficha.');
+    const blob = new Blob([JSON.stringify(result.sheet, null, 2)], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${(result.name || fallbackName || 'ficha-rpg').replace(/[^a-z0-9-_]+/gi, '-')}.txt`;
+    link.click();
+    URL.revokeObjectURL(link.href);
 }
 function escapeAdminText(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[character]);
@@ -814,6 +840,21 @@ async function saveSheetToAccount() {
     feedback.innerText = 'Ficha salva na conta.';
     if (response.ok) closeModal('save-modal');
 }
+async function saveCurrentSheet() {
+    if (!authToken || document.getElementById('sheet-editor')?.hidden) return;
+    const sheet = collectSheetData();
+    if (!currentSheetId) {
+        const name = currentSheetName || document.getElementById('char-name')?.value?.trim() || 'Minha ficha';
+        const response = await fetch(apiUrl('/api/sheets'), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ name, sheet }) });
+        if (response.ok) {
+            const result = await response.json();
+            currentSheetId = result.id;
+            currentSheetName = result.name;
+        }
+        return;
+    }
+    await fetch(apiUrl(`/api/sheets/${encodeURIComponent(currentSheetId)}`), { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ sheet }), keepalive: true });
+}
 async function loadSheetFromAccount() {
     return;
 }
@@ -830,6 +871,8 @@ async function restoreAuthSession() {
         updateAuthButton(result.user);
         if (sessionStorage.getItem('new-sheet') === 'true') {
             sessionStorage.removeItem('new-sheet');
+            currentSheetId = null;
+            currentSheetName = '';
             showSheetEditor();
             return;
         }
@@ -1398,3 +1441,4 @@ renderAttackSelectors();
 calculateSheet();
 restoreAuthSession();
 updateBars();
+window.addEventListener('beforeunload', () => { saveCurrentSheet(); });

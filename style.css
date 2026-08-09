@@ -80,7 +80,8 @@
         .home-login-action {
             position: absolute;
             top: 28px;
-            left: 0;
+            right: 0;
+            left: auto;
         }
 
         .new-character-btn,
@@ -170,6 +171,22 @@
             cursor: pointer;
             font-size: 11px;
             font-weight: 700;
+        }
+
+        .character-card-actions {
+            display: flex;
+            align-self: flex-end;
+            gap: 6px;
+            margin-top: auto;
+        }
+
+        .character-card-actions button {
+            margin-top: 0;
+        }
+
+        .character-export-btn {
+            background: #333 !important;
+            border: 1px solid #666 !important;
         }
 
         .characters-empty {
@@ -928,7 +945,7 @@
 
         .header-title-box .file-actions {
             top: 13px;
-            left: 170px;
+            left: 250px;
             align-items: flex-start;
         }
 
@@ -941,7 +958,7 @@
         .header-title-box .file-actions .file-action-btn:nth-child(2) {
             position: absolute;
             top: 45px;
-            left: -156px;
+            left: -236px;
         }
 
         .header-title-box .login-action {
