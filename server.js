@@ -48,6 +48,11 @@ database.exec(`
         content TEXT NOT NULL,
         updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS sessions (
+        token TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL
+    );
 `);
 const userColumns = database.prepare('PRAGMA table_info(users)').all().map(column => column.name);
 if (!userColumns.includes('username')) database.exec('ALTER TABLE users ADD COLUMN username TEXT');
@@ -101,6 +106,21 @@ function sendJson(response, status, body) {
     response.end(JSON.stringify(body));
 }
 
+function saveSession(token, userId) {
+    sessions.set(token, userId);
+    database.prepare('INSERT OR REPLACE INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)').run(token, userId, new Date().toISOString());
+}
+
+function removeSession(token) {
+    sessions.delete(token);
+    database.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+}
+
+function removeUserSessions(userId) {
+    for (const [token, sessionUserId] of sessions) if (sessionUserId === userId) sessions.delete(token);
+    database.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
+}
+
 function allowApiOrigin(response) {
     response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -121,7 +141,7 @@ function getRequestBody(request) {
 
 function getUser(request) {
     const token = request.headers.authorization?.replace('Bearer ', '');
-    const userId = token && sessions.get(token);
+    const userId = token && (sessions.get(token) || database.prepare('SELECT user_id AS userId FROM sessions WHERE token = ?').get(token)?.userId);
     if (!userId) return null;
     const user = database.prepare('SELECT id, email, username, role, password_salt AS passwordSalt, password_hash AS passwordHash, created_at AS createdAt FROM users WHERE id = ?').get(userId);
     return user || null;
@@ -137,7 +157,7 @@ async function handleApi(request, response, url) {
             const admin = ADMIN_PASSWORD && database.prepare('SELECT id, email, username, role, password_salt AS passwordSalt, password_hash AS passwordHash FROM users WHERE username = ? AND role = \'admin\'').get(ADMIN_USERNAME);
             if (!admin || !passwordsMatch(password, admin)) return sendJson(response, 401, { error: 'Usuário ou senha incorretos.' });
             const token = crypto.randomBytes(32).toString('hex');
-            sessions.set(token, admin.id);
+            saveSession(token, admin.id);
             return sendJson(response, 200, { token, user: { id: admin.id, username: admin.username, email: admin.email, role: admin.role } });
         }
         const email = identifier.toLowerCase();
@@ -157,12 +177,12 @@ async function handleApi(request, response, url) {
             database.prepare('INSERT INTO users (id, email, password_salt, password_hash, created_at) VALUES (?, ?, ?, ?, ?)').run(user.id, user.email, user.passwordSalt, user.passwordHash, user.createdAt);
         }
         const token = crypto.randomBytes(32).toString('hex');
-        sessions.set(token, user.id);
+        saveSession(token, user.id);
         return sendJson(response, 200, { token, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
     }
     if (request.method === 'POST' && url.pathname === '/api/logout') {
         const token = request.headers.authorization?.replace('Bearer ', '');
-        if (token) sessions.delete(token);
+        if (token) removeSession(token);
         return sendJson(response, 200, { ok: true });
     }
     const user = getUser(request);
@@ -198,13 +218,13 @@ async function handleApi(request, response, url) {
             if (password.length < 6) return sendJson(response, 400, { error: 'A nova senha precisa ter pelo menos 6 caracteres.' });
             const passwordData = hashPassword(password);
             database.prepare('UPDATE users SET password_salt = ?, password_hash = ? WHERE id = ?').run(passwordData.salt, passwordData.hash, targetId);
-            for (const [token, sessionUserId] of sessions) if (sessionUserId === targetId) sessions.delete(token);
+            removeUserSessions(targetId);
             return sendJson(response, 200, { ok: true });
         }
         if (request.method === 'DELETE') {
             if (targetId === user.id || target.role === 'admin') return sendJson(response, 400, { error: 'A conta administrativa não pode ser excluída.' });
             database.prepare('DELETE FROM users WHERE id = ?').run(targetId);
-            for (const [token, sessionUserId] of sessions) if (sessionUserId === targetId) sessions.delete(token);
+            removeUserSessions(targetId);
             return sendJson(response, 200, { ok: true });
         }
         return sendJson(response, 405, { error: 'Método não permitido.' });
