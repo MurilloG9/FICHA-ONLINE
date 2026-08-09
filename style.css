@@ -1105,18 +1105,32 @@
             min-height: 180px;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;
-            gap: 8px;
+            justify-content: space-between;
+            gap: 12px;
             padding: 18px;
-            border: 1px solid #292929;
-            border-radius: 5px;
-            background: linear-gradient(145deg, #241536, #161616 65%);
+            border: 1px solid #3b2b4a;
+            border-radius: 14px;
+            background: linear-gradient(145deg, #241536, #161616 70%);
+            box-shadow: 0 16px 32px rgba(0,0,0,.25);
         }
 
-        .campaign-card h2 { color: #fff; font-size: 22px; }
+        .campaign-icon {
+            width: 46px;
+            height: 46px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            background: rgba(168, 85, 247, 0.2);
+            color: #c084fc;
+            font-size: 22px;
+        }
+
+        .campaign-card-content { display: flex; flex-direction: column; gap: 4px; }
+        .campaign-card h2 { margin: 0; color: #fff; font-size: 22px; }
+        .campaign-card p { margin: 0; color: #ddd; }
         .campaign-card small { color: #aaa; }
         .campaign-card button,
-        .campaign-detail-header button { align-self: flex-end; border: 1px solid #a855f7; padding: 8px 12px; background: #a855f7; color: #fff; cursor: pointer; font-weight: 700; }
+        .campaign-detail-header button { align-self: flex-end; border: 1px solid #a855f7; padding: 8px 12px; background: #a855f7; color: #fff; cursor: pointer; font-weight: 700; border-radius: 8px; }
 
         .campaign-detail-header { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 20px; }
         .campaign-detail-header h1 { margin-right: auto; color: #fff; font-size: 28px; }
