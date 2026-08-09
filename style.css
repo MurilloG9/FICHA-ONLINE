@@ -20,6 +20,11 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
+        .characters-view[hidden],
+        .sheet-container[hidden] {
+            display: none !important;
+        }
+
         body {
             background: #111;
             color: var(--text-light);
