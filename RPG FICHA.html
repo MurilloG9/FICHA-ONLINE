@@ -11,12 +11,20 @@
 <section class="characters-view" id="characters-view">
     <header class="characters-header">
         <div>
-            <span class="characters-eyebrow">Viewpoint</span>
+            <div class="brand-section characters-brand">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <div class="brand-title">Viewpoint</div>
+            </div>
             <h1>Personagens</h1>
             <p id="characters-count">Fichas: 0</p>
         </div>
         <div class="characters-header-actions">
             <button class="file-action-btn home-login-action" id="home-login-btn" type="button" onclick="openAccountMenu()">Login</button>
+            <button class="file-action-btn open-sheet-home-btn" type="button" onclick="document.getElementById('sheet-file-input').click()">Abrir ficha</button>
+            <input type="file" id="sheet-file-input" accept=".txt,.html,text/plain,text/html" hidden onchange="loadSavedSheet(event)">
             <button class="new-character-btn" type="button" onclick="createNewSheet()">Nova ficha</button>
         </div>
     </header>
@@ -29,9 +37,6 @@
         <div class="file-actions">
             <button class="file-action-btn" type="button" onclick="showCharactersView()">Personagens</button>
             <button class="file-action-btn" type="button" onclick="openSaveOptions()">Salvar ficha</button>
-            <button class="file-action-btn" type="button" onclick="document.getElementById('sheet-file-input').click()">Abrir ficha</button>
-            <button class="file-action-btn" type="button" onclick="toggleHistory()">Histórico</button>
-            <input type="file" id="sheet-file-input" accept=".txt,.html,text/plain,text/html" hidden onchange="loadSavedSheet(event)">
         </div>
         <button class="file-action-btn settings-action" type="button" onclick="toggleSettings(event)" title="Configurações" aria-label="Configurações">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -436,6 +441,11 @@
         <div class="history-empty" id="history-empty">Nenhuma rolagem realizada</div>
     </div>
 </div>
+<button class="history-float-btn" type="button" onclick="toggleHistory()" title="Histórico" aria-label="Abrir histórico">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path>
+    </svg>
+</button>
 
 <!-- MODAIS DE CADASTRO -->
 <div class="modal" id="attack-modal">

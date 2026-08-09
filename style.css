@@ -872,6 +872,114 @@
             }
         }
 
+        /* Layout shared by the gallery and the sheet editor. */
+        .characters-brand {
+            display: flex;
+            justify-content: flex-start;
+            gap: 10px;
+            margin: 0 0 22px;
+            text-align: left;
+        }
+
+        .characters-brand svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .characters-brand .brand-title {
+            font-size: 25px;
+        }
+
+        .characters-header h1 {
+            margin-top: 0;
+        }
+
+        .open-sheet-home-btn {
+            position: absolute;
+            top: 28px;
+            right: 118px;
+        }
+
+        .characters-header-actions .new-character-btn {
+            position: absolute;
+            top: 28px;
+            right: 0;
+        }
+
+        .header-title-box {
+            padding-top: 56px;
+        }
+
+        .header-title-box .brand-section {
+            position: absolute;
+            top: 12px;
+            left: 14px;
+            justify-content: flex-start;
+        }
+
+        .header-title-box .brand-section svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .header-title-box .brand-title {
+            font-size: 25px;
+        }
+
+        .header-title-box .file-actions {
+            top: 13px;
+            left: 170px;
+            align-items: flex-start;
+        }
+
+        .header-title-box .file-actions .file-action-btn:first-child {
+            min-height: 34px;
+            padding: 9px 16px;
+            font-size: 14px;
+        }
+
+        .header-title-box .file-actions .file-action-btn:nth-child(2) {
+            position: absolute;
+            top: 45px;
+            left: -156px;
+        }
+
+        .header-title-box .login-action {
+            top: 12px;
+            right: 54px;
+        }
+
+        .header-title-box .admin-users-action {
+            top: 12px;
+            right: 160px;
+        }
+
+        .history-float-btn {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 1000;
+            width: 52px;
+            height: 52px;
+            display: grid;
+            place-items: center;
+            border: 1px solid #a855f7;
+            border-radius: 50%;
+            background: #18181b;
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, .45);
+        }
+
+        .history-float-btn:hover {
+            background: #a855f7;
+        }
+
+        .history-float-btn svg {
+            width: 23px;
+            height: 23px;
+        }
+
         .avatar-box {
             display: flex;
             flex-direction: column;
