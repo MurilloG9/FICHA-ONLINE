@@ -354,6 +354,13 @@ async function handleApi(request, response, url) {
         if (!sheet) return sendJson(response, 404, { error: 'Ficha não encontrada.' });
         return sendJson(response, 200, { sheet: JSON.parse(sheet.content), name: sheet.name, updatedAt: sheet.updatedAt });
     }
+    if (request.method === 'DELETE' && sheetMatch) {
+        const id = decodeURIComponent(sheetMatch[1]);
+        const existing = database.prepare('SELECT id FROM saved_sheets WHERE id = ? AND user_id = ?').get(id, user.id);
+        if (!existing) return sendJson(response, 404, { error: 'Ficha não encontrada.' });
+        database.prepare('DELETE FROM saved_sheets WHERE id = ? AND user_id = ?').run(id, user.id);
+        return sendJson(response, 200, { ok: true });
+    }
     if (request.method === 'PUT' && sheetMatch) {
         const body = await getRequestBody(request);
         if (!body.sheet || body.sheet.format !== 'ficha-rpg-data') return sendJson(response, 400, { error: 'Formato de ficha inválido.' });

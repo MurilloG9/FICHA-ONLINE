@@ -680,7 +680,7 @@ function selectSiteSection(section) {
 let campaignModalMode = 'create';
 function openCampaignCreator() { campaignModalMode = 'create'; document.getElementById('campaign-modal-title').innerText = 'Criar campanha'; document.getElementById('campaign-modal-label').innerText = 'Nome da campanha'; document.getElementById('campaign-modal-input').value = ''; document.getElementById('campaign-modal').style.display = 'flex'; }
 function openJoinCampaign() { campaignModalMode = 'join'; document.getElementById('campaign-modal-title').innerText = 'Entrar em campanha'; document.getElementById('campaign-modal-label').innerText = 'Código da campanha'; document.getElementById('campaign-modal-input').value = ''; document.getElementById('campaign-modal').style.display = 'flex'; }
-async function submitCampaignModal() { const value = document.getElementById('campaign-modal-input').value.trim(); if (!value) return; const path = campaignModalMode === 'create' ? '/api/campaigns' : '/api/campaigns/join'; const body = campaignModalMode === 'create' ? { name: value } : { inviteCode: value }; const response = await fetch(apiUrl(path), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify(body) }); const result = await response.json(); if (!response.ok) return alert(result.error || 'Não foi possível concluir.'); closeModal('campaign-modal'); loadCampaigns(); }
+async function submitCampaignModal() { const value = document.getElementById('campaign-modal-input').value.trim(); if (!value) return; const path = campaignModalMode === 'create' ? '/api/campaigns' : '/api/campaigns/join'; const body = campaignModalMode === 'create' ? { name: value } : { inviteCode: value }; const response = await fetch(apiUrl(path), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify(body) }); const result = await response.json(); if (!response.ok) return alert(result.error || 'Não foi possível concluir.'); closeModal('campaign-modal'); selectSiteSection('campaigns'); }
 async function loadCampaigns() { const grid = document.getElementById('campaigns-grid'); if (!grid) return; const response = await fetch(apiUrl('/api/campaigns'), { headers: { Authorization: `Bearer ${authToken}` } }); const result = await response.json(); if (!response.ok) return grid.innerHTML = `<div class="characters-empty"><strong>${escapeAdminText(result.error)}</strong></div>`; grid.innerHTML = result.campaigns.map(c => `<article class="campaign-card"><h2>${escapeAdminText(c.name)}</h2><small>${c.memberCount} jogador(es)</small><button type="button" onclick="openCampaign('${c.id}')">Acessar</button></article>`).join('') || '<div class="characters-empty"><strong>Nenhuma campanha</strong><span>Crie uma campanha ou entre com um código.</span></div>'; }
 async function openCampaign(id) { const response = await fetch(apiUrl(`/api/campaigns/${encodeURIComponent(id)}`), { headers: { Authorization: `Bearer ${authToken}` } }); const result = await response.json(); if (!response.ok) return alert(result.error); document.getElementById('campaigns-view').hidden = true; const detail = document.getElementById('campaign-detail'); detail.hidden = false; detail.innerHTML = `<div class="campaign-detail-header"><button type="button" onclick="selectSiteSection('campaigns')">Campanhas</button><h1>${escapeAdminText(result.campaign.name)}</h1><div><button type="button" onclick="addCharacterToCampaign('${id}')">Adicionar personagem</button>${result.campaign.isOwner ? `<button type="button" onclick="inviteCampaign('${id}')">Convidar jogador</button><button type="button" class="master-shield-btn">Escudo do Mestre</button>` : ''}<button type="button" onclick="leaveCampaign('${id}', ${result.campaign.isOwner})">${result.campaign.isOwner ? 'Excluir campanha' : 'Sair da campanha'}</button></div></div><div class="campaign-tabs"><button class="site-tab active">Personagens</button><button class="site-tab">Jogadores</button></div><div class="campaign-members">${result.members.map(m => `<article class="campaign-member-card"><div class="campaign-member-avatar">${m.sheetName ? 'P' : '?'}</div><div class="campaign-member-content"><h2>${escapeAdminText(m.sheetName || 'Sem personagem')}</h2><p>${escapeAdminText(m.username || m.email)}</p><small>${m.userId === result.campaign.ownerId ? 'Mestre' : 'Jogador'} · ${escapeAdminText(m.username || m.email)}</small></div></article>`).join('')}</div>`; }
 async function addCharacterToCampaign(id) { const response = await fetch(apiUrl('/api/sheets'), { headers: { Authorization: `Bearer ${authToken}` } }); const result = await response.json(); if (!result.sheets?.length) return alert('Você ainda não possui personagens.'); const list = result.sheets.map((sheet, index) => `${index + 1}. ${sheet.characterName || sheet.name}`).join('\n'); const choice = Number(prompt(`Escolha o personagem para adicionar:\n${list}`)) - 1; const sheet = result.sheets[choice]; if (!sheet) return; const add = await fetch(apiUrl(`/api/campaigns/${id}/characters`), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ sheetId: sheet.id }) }); if (!add.ok) return alert((await add.json()).error); openCampaign(id); }
@@ -724,7 +724,12 @@ function createCharacterCard(sheet) {
     exportButton.className = 'character-export-btn';
     exportButton.innerText = 'Exportar';
     exportButton.onclick = () => exportSavedAccountSheet(sheet.id, sheet.name);
-    actions.append(button, exportButton);
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'character-delete-btn';
+    deleteButton.innerText = 'Excluir';
+    deleteButton.onclick = () => deleteSavedAccountSheet(sheet.id, sheet.name);
+    actions.append(button, exportButton, deleteButton);
     content.append(name, characterClass, date, actions);
     card.append(avatar, content);
     return card;
@@ -808,6 +813,18 @@ async function exportSavedAccountSheet(sheetId, fallbackName) {
     link.download = `${(result.name || fallbackName || 'ficha-rpg').replace(/[^a-z0-9-_]+/gi, '-')}.txt`;
     link.click();
     URL.revokeObjectURL(link.href);
+}
+async function deleteSavedAccountSheet(sheetId, fallbackName) {
+    if (!confirm(`Excluir a ficha "${fallbackName}"?`)) return;
+    const response = await fetch(apiUrl(`/api/sheets/${encodeURIComponent(sheetId)}`), { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
+    const result = await response.json();
+    if (!response.ok) return alert(result.error || 'Não foi possível excluir a ficha.');
+    if (currentSheetId === sheetId) {
+        currentSheetId = null;
+        currentSheetName = '';
+    }
+    await loadCharacterCards();
+    alert('Ficha excluída.');
 }
 function escapeAdminText(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[character]);
